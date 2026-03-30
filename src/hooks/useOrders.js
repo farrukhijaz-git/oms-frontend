@@ -11,7 +11,7 @@ export function useOrders(params = {}) {
 export function useOrder(id) {
   return useQuery({
     queryKey: ['orders', id],
-    queryFn: () => api.get(`/orders/${id}`).then(r => r.data),
+    queryFn: () => api.get(`/orders/${id}`).then(r => r.data.order),
     enabled: !!id,
   })
 }
