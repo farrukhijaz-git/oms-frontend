@@ -40,7 +40,9 @@ function AssignModal({ label, onClose }) {
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
             <option value="">Select order...</option>
             {orders.map(o => (
-              <option key={o.id} value={o.id}>{o.customer_name} — {o.city}, {o.state}</option>
+              <option key={o.id} value={o.id}>
+                {o.external_id ? `#${o.external_id}` : o.id.slice(0, 8)} — {o.customer_name} ({o.city}, {o.state})
+              </option>
             ))}
           </select>
           <div className="flex gap-3">
