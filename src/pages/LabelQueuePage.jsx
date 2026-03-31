@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
 import { showToast } from '../components/Toast'
@@ -60,8 +60,92 @@ function AssignModal({ label, onClose }) {
   const confirmMutation = useConfirmLabel()
   const assignMutation = useAssignLabel()
   const [orderId, setOrderId] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const modalRef = useRef(null)
+  const searchInputRef = useRef(null)
+  const dropdownRef = useRef(null)
+  
   const { data } = useOrders({ limit: 50, status: 'new,label_generated,inventory_ordered,packed,ready' })
   const orders = data?.orders || []
+
+  // Center modal on mount
+  useEffect(() => {
+    if (modalRef.current) {
+      const rect = modalRef.current.getBoundingClientRect()
+      setPosition({
+        x: (window.innerWidth - rect.width) / 2,
+        y: (window.innerHeight - rect.height) / 2
+      })
+    }
+  }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchInputRef.current && !searchInputRef.current.contains(e.target) &&
+          dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Handle dragging
+  const handleMouseDown = (e) => {
+    if (e.target.closest('.modal-content')) return // Don't drag if clicking content
+    setIsDragging(true)
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+  }
+
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleMouseMove = (e) => {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      })
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, dragStart])
+
+  // Filter orders based on search term
+  const filteredOrders = orders.filter(o => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    const externalId = o.external_id?.toLowerCase() || ''
+    const customerName = o.customer_name?.toLowerCase() || ''
+    const city = o.city?.toLowerCase() || ''
+    const state = o.state?.toLowerCase() || ''
+    return externalId.includes(search) || 
+           customerName.includes(search) || 
+           city.includes(search) || 
+           state.includes(search)
+  })
+
+  const selectedOrder = orders.find(o => o.id === orderId)
+
+  const handleSelectOrder = (order) => {
+    setOrderId(order.id)
+    setSearchTerm(`#${order.external_id || order.id.slice(0, 8)} — ${order.customer_name} (${order.city}, ${order.state})`)
+    setShowDropdown(false)
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -80,34 +164,100 @@ function AssignModal({ label, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-md p-6">
-        <h3 className="font-semibold text-gray-900 mb-1">Assign to Order</h3>
-        <p className="text-xs text-gray-400 mb-4">{label.original_filename}</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <select
-            value={orderId}
-            onChange={e => setOrderId(e.target.value)}
-            required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Select order…</option>
-            {orders.map(o => (
-              <option key={o.id} value={o.id}>
-                {o.external_id ? `#${o.external_id}` : o.id.slice(0, 8)} — {o.customer_name} ({o.city}, {o.state})
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-3">
-            <button type="button" onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-              Cancel
-            </button>
-            <button type="submit"
-              className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm hover:bg-navy-hover">
-              Assign
-            </button>
-          </div>
-        </form>
+      <div 
+        ref={modalRef}
+        className="bg-white rounded-xl w-full max-w-md shadow-2xl"
+        style={{
+          position: 'absolute',
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          cursor: isDragging ? 'grabbing' : 'grab'
+        }}
+      >
+        {/* Draggable header */}
+        <div 
+          onMouseDown={handleMouseDown}
+          className="px-6 pt-6 pb-3 border-b border-gray-100 select-none"
+        >
+          <h3 className="font-semibold text-gray-900 mb-1">Assign to Order</h3>
+          <p className="text-xs text-gray-400">{label.original_filename}</p>
+        </div>
+
+        {/* Modal content */}
+        <div className="modal-content p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setShowDropdown(true)
+                  if (!e.target.value) setOrderId('')
+                }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Search orders by order #, name, city, state..."
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+              />
+              
+              {showDropdown && (
+                <div 
+                  ref={dropdownRef}
+                  className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {filteredOrders.length === 0 ? (
+                    <div className="px-3 py-2 text-sm text-gray-400">No orders found</div>
+                  ) : (
+                    filteredOrders.map(o => (
+                      <button
+                        key={o.id}
+                        type="button"
+                        onClick={() => handleSelectOrder(o)}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0 ${
+                          o.id === orderId ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900">
+                          {o.external_id ? `#${o.external_id}` : o.id.slice(0, 8)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {o.customer_name} — {o.city}, {o.state}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {selectedOrder && (
+              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
+                <div className="font-medium text-gray-700 mb-1">Selected Order:</div>
+                <div>#{selectedOrder.external_id || selectedOrder.id.slice(0, 8)}</div>
+                <div>{selectedOrder.customer_name}</div>
+                <div>{selectedOrder.city}, {selectedOrder.state}</div>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button 
+                type="button" 
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit"
+                disabled={!orderId}
+                className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm hover:bg-navy-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Assign
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )
