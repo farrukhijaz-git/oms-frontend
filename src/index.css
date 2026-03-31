@@ -3,5 +3,19 @@
 @tailwind utilities;
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply bg-[#F0F4F8] text-gray-900;
+}
+
+@layer components {
+  /* Shared card style — 0.5px border, no shadow */
+  .card {
+    @apply bg-white rounded-xl;
+    border: 0.5px solid #E2E8F0;
+  }
+
+  /* Topbar inside page content */
+  .topbar {
+    @apply h-[50px] sticky top-0 z-10 bg-white flex items-center justify-between px-6;
+    border-bottom: 0.5px solid #E8EEF4;
+  }
 }
