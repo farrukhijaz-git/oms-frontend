@@ -11,6 +11,10 @@ export default function LoginPage() {
     if (user) navigate('/', { replace: true })
   }, [user, navigate])
 
+  const handleGoogleLogin = () => {
+    window.location.href = `${apiBase}/auth/google`
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 w-full max-w-sm text-center">
@@ -21,8 +25,8 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-gray-900">Order Management</h1>
           <p className="text-gray-500 text-sm mt-1">Sign in to continue</p>
         </div>
-        <a
-          href={`${apiBase}/auth/google`}
+        <button
+          onClick={handleGoogleLogin}
           className="flex items-center justify-center gap-3 w-full px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -32,7 +36,7 @@ export default function LoginPage() {
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
           Sign in with Google
-        </a>
+        </button>
       </div>
     </div>
   )
