@@ -42,6 +42,13 @@ export function useConfirmLabel() {
   })
 }
 
+export function useGetLabelUrl() {
+  return useMutation({
+    mutationFn: (labelId) =>
+      api.get(`/labels/${labelId}/download`).then(r => r.data),
+  })
+}
+
 export function useAssignLabel() {
   const qc = useQueryClient()
   return useMutation({

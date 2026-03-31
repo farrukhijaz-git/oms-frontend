@@ -1,7 +1,47 @@
 import { useState, useRef } from 'react'
-import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel } from '../hooks/useLabels'
+import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
 import { showToast } from '../components/Toast'
+
+const EyeIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>
+)
+
+/** Extract a human-readable label from the stored filename.
+ *  "p3_document-662a5f31-....pdf" → "Page 3"
+ *  "document-662a5f31-....pdf"   → "Label"
+ */
+function labelDisplay(filename) {
+  const m = filename?.match(/^p(\d+)_/i)
+  if (m) return `Page ${m[1]}`
+  return 'Label'
+}
+
+function PreviewButton({ labelId }) {
+  const getUrl = useGetLabelUrl()
+  const handleClick = async () => {
+    try {
+      const { url } = await getUrl.mutateAsync(labelId)
+      window.open(url, '_blank', 'noopener')
+    } catch {
+      showToast('Could not load preview', 'error')
+    }
+  }
+  return (
+    <button
+      onClick={handleClick}
+      disabled={getUrl.isPending}
+      title="Preview label PDF"
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+    >
+      <EyeIcon />
+      {getUrl.isPending ? '…' : 'View'}
+    </button>
+  )
+}
 
 function ConfidenceBadge({ score }) {
   const pct = Math.round(score * 100)
@@ -180,7 +220,7 @@ export default function LabelQueuePage() {
               <table className="w-full text-sm min-w-[700px]">
                 <thead className="border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">File</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Label</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Extracted Name</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Matched Order</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Confidence</th>
@@ -190,8 +230,11 @@ export default function LabelQueuePage() {
                 <tbody className="divide-y divide-gray-50">
                   {queue.map(label => (
                     <tr key={label.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3 text-gray-700 max-w-[160px] truncate text-xs font-mono">
-                        {label.original_filename}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <PreviewButton labelId={label.id} />
+                          <span className="text-xs text-gray-500">{labelDisplay(label.original_filename)}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700 text-sm">{label.extracted_name || '—'}</td>
                       <td className="px-4 py-3 text-gray-700 text-sm">{label.matched_customer_name || '—'}</td>
@@ -232,7 +275,7 @@ export default function LabelQueuePage() {
               <table className="w-full text-sm min-w-[600px]">
                 <thead className="border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">File</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Label</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Extracted Name</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Address</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Actions</th>
@@ -241,8 +284,11 @@ export default function LabelQueuePage() {
                 <tbody className="divide-y divide-gray-50">
                   {unmatched.map(label => (
                     <tr key={label.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3 text-gray-700 max-w-[160px] truncate text-xs font-mono">
-                        {label.original_filename}
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <PreviewButton labelId={label.id} />
+                          <span className="text-xs text-gray-500">{labelDisplay(label.original_filename)}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-700 text-sm">{label.extracted_name || '—'}</td>
                       <td className="px-4 py-3 text-xs text-gray-400 max-w-[200px] truncate">
