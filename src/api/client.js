@@ -10,7 +10,8 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config
-    if (error.response?.status === 401 && !original._retry) {
+    // Don't retry if: already retried, or the failed request was the refresh itself
+    if (error.response?.status === 401 && !original._retry && !original.url?.includes('/auth/refresh')) {
       original._retry = true
       try {
         const { data } = await api.post('/auth/refresh')
@@ -19,8 +20,10 @@ api.interceptors.response.use(
         original.headers['Authorization'] = `Bearer ${data.token}`
         return api(original)
       } catch {
-        // Redirect to login
-        window.location.href = '/login'
+        // Redirect to login only if not already there
+        if (!window.location.pathname.includes('/login')) {
+          window.location.href = '/login'
+        }
       }
     }
     return Promise.reject(error)
