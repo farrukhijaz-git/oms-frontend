@@ -6,9 +6,10 @@ export const STATUS_CONFIG = {
   packed:            { label: 'Packed',            color: '#534AB7', bg: '#EEEDFE' },
   ready:             { label: 'Ready',             color: '#993556', bg: '#FBEAF0' },
   shipped:           { label: 'Shipped',           color: '#6B7280', bg: '#F3F4F6' },
+  delivered:         { label: 'Delivered',         color: '#0D7C66', bg: '#CCFBF1' },
 }
 
-export const STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped']
+export const STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
 
 /** Small filled dot matching the status color */
 export function StatusDot({ status, size = 8 }) {

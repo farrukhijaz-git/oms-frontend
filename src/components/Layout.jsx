@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useUploadContext } from '../context/UploadContext'
 
 // ── Sidebar icons (Heroicons-style inline SVG) ────────────────────────────────
 const DashIcon = () => (
@@ -61,6 +62,69 @@ function NavItem({ to, label, icon: Icon, exact }) {
       <Icon />
       <span>{label}</span>
     </NavLink>
+  )
+}
+
+// ── Floating upload-progress indicator ───────────────────────────────────────
+function UploadProgressCard({ job }) {
+  const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0
+  const isDone = job.status === 'done'
+  const isError = job.status === 'error'
+
+  return (
+    <div className="w-64 bg-white rounded-xl shadow-lg border border-gray-200 p-3 text-sm pointer-events-auto">
+      <div className="flex items-center gap-2 mb-2">
+        {isDone ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#639922" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        ) : isError ? (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        ) : (
+          <div className="w-3.5 h-3.5 border-2 border-[#185FA5] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+        )}
+        <span className="font-medium text-gray-800 text-xs">
+          {isDone ? 'Labels processed' : isError ? 'Processing failed' : 'Processing labels…'}
+        </span>
+      </div>
+
+      {!isDone && !isError && job.total > 0 && (
+        <>
+          <div className="text-xs text-gray-400 mb-1.5 truncate">
+            File {job.current} of {job.total}
+            {job.current_file ? ` · ${job.current_file}` : ''}
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-1">
+            <div
+              className="h-1 rounded-full bg-[#185FA5] transition-all duration-500"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </>
+      )}
+
+      {isDone && job.results && (
+        <div className="text-xs text-gray-400 mt-1">
+          {job.results.filter(r => !r.error).length} label(s) ready for review
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-xs text-red-400 mt-1">{job.error || 'An unexpected error occurred'}</div>
+      )}
+    </div>
+  )
+}
+
+function UploadProgressIndicator() {
+  const { activeJobs } = useUploadContext()
+  if (activeJobs.length === 0) return null
+  return (
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+      {activeJobs.map(job => <UploadProgressCard key={job.id} job={job} />)}
+    </div>
   )
 }
 
@@ -141,6 +205,9 @@ export default function Layout() {
       <main className="flex-1 md:ml-[220px] flex flex-col min-h-screen pb-16 md:pb-0">
         <Outlet />
       </main>
+
+      {/* ── Global upload progress (persists across navigation) ──────────── */}
+      <UploadProgressIndicator />
 
       {/* ── Mobile bottom bar ────────────────────────────────────────────────── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-20">

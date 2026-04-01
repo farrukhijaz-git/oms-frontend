@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
+import { UploadProvider } from './context/UploadContext'
 import Layout from './components/Layout'
 import ToastContainer from './components/Toast'
 import LoginPage from './pages/LoginPage'
@@ -27,7 +28,7 @@ function RequireAdmin({ children }) {
 
 export default function App() {
   return (
-    <>
+    <UploadProvider>
       <ToastContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -42,6 +43,6 @@ export default function App() {
           <Route path="admin/walmart" element={<RequireAdmin><AdminWalmartPage /></RequireAdmin>} />
         </Route>
       </Routes>
-    </>
+    </UploadProvider>
   )
 }

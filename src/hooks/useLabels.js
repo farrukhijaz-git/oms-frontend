@@ -15,17 +15,17 @@ export function useLabelUnmatched() {
   })
 }
 
+/**
+ * Starts a background upload job.
+ * Returns { job_id, total_files } immediately — the UploadContext polls for progress.
+ * Does NOT invalidate queries here; UploadContext does that when the job completes.
+ */
 export function useUploadLabels() {
-  const qc = useQueryClient()
   return useMutation({
     mutationFn: (files) => {
       const fd = new FormData()
       files.forEach(f => fd.append('files', f))
       return api.post('/labels/upload', fd).then(r => r.data)
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['labels'] })
-      qc.invalidateQueries({ queryKey: ['orders'] })
     },
   })
 }

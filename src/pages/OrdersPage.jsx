@@ -35,7 +35,7 @@ function StatusUpdateModal({ order, onClose }) {
               ))}
             </select>
           </div>
-          {status === 'shipped' && (
+          {(status === 'shipped' || status === 'delivered') && (
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1.5">Tracking Number</label>
               <input value={tracking} onChange={e => setTracking(e.target.value)}
@@ -250,28 +250,26 @@ export default function OrdersPage() {
               <table className="w-full text-sm">
                 <thead className="border-b border-gray-100">
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Customer</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Order ID</th>
+                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Order ID</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Customer</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Platform</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Items</th>
                     <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Updated</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Created</th>
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {orders.map(order => (
                     <tr key={order.id} className="hover:bg-gray-50/50">
                       <td className="px-5 py-3">
-                        <Link to={`/orders/${order.id}`}
-                          className="font-medium text-gray-900 hover:text-blue-600 block">
-                          {order.customer_name}
-                        </Link>
-                        <span className="text-xs text-gray-400">{order.city}, {order.state}</span>
-                      </td>
-                      <td className="px-4 py-3">
                         <span className="font-mono text-xs text-gray-500">
                           {order.external_id ? `#${order.external_id}` : <span className="text-gray-300">—</span>}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="font-medium text-gray-900 block">{order.customer_name}</span>
+                        <span className="text-xs text-gray-400">{order.city}, {order.state}</span>
                       </td>
                       <td className="px-4 py-3">
                         <PlatformBadge platform={order.platform} />
@@ -283,7 +281,15 @@ export default function OrdersPage() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                        {new Date(order.updated_at).toLocaleDateString()}
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Link
+                          to={`/orders/${order.id}`}
+                          className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 whitespace-nowrap"
+                        >
+                          View
+                        </Link>
                       </td>
                     </tr>
                   ))}
