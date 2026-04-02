@@ -37,7 +37,7 @@ export default function DashboardPage() {
         ) : (
           <>
             {/* ── 6 Status summary cards ─────────────────────────────────── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
               {STATUS_ORDER.map(status => {
                 const cfg = STATUS_CONFIG[status]
                 return (
@@ -77,6 +77,7 @@ export default function DashboardPage() {
                       <tr className="border-b border-gray-100">
                         <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">Order ID</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Customer</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Platform</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Created</th>
                         <th className="px-4 py-2.5" />
@@ -89,17 +90,15 @@ export default function DashboardPage() {
                             <span className="font-mono text-xs text-gray-700 font-medium">
                               {order.external_id ? `#${order.external_id}` : order.id.slice(0, 8)}
                             </span>
-                            {order.platform && (
-                              <div className="mt-0.5">
-                                <PlatformBadge platform={order.platform} />
-                              </div>
-                            )}
                           </td>
                           <td className="px-4 py-3">
                             <span className="font-medium text-gray-900 text-sm block">{order.customer_name}</span>
                             {(order.city || order.state) && (
                               <span className="text-xs text-gray-400">{[order.city, order.state].filter(Boolean).join(', ')}</span>
                             )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <PlatformBadge platform={order.platform} />
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={order.status} />
