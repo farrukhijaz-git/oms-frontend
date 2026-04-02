@@ -24,14 +24,8 @@ function trackingUrl(tn) {
   return null
 }
 
-function InfoRow({ label, children }) {
-  return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderBottom: '1px solid var(--oms-border-soft)' }}>
-      <span style={{ fontSize: 12, color: 'var(--oms-text-muted)', minWidth: 110, flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: 13, color: 'var(--oms-text-primary)' }}>{children}</span>
-    </div>
-  )
-}
+const STAT_LABEL = { fontSize: 11, color: 'var(--oms-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 5, fontWeight: 500 }
+const STAT_VALUE = { fontSize: 14, fontWeight: 600, color: 'var(--oms-text-primary)' }
 
 export default function OrderDetailPage() {
   const { id } = useParams()
@@ -133,71 +127,91 @@ export default function OrderDetailPage() {
         <Panel>
           <PanelHeader><PanelTitle>Order Details</PanelTitle></PanelHeader>
           <PanelBody>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px 24px' }}>
+
               <div>
-                <InfoRow label="Order Date">
+                <div style={STAT_LABEL}>Order Date</div>
+                <div style={STAT_VALUE}>
                   {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </InfoRow>
-                <InfoRow label="Platform">
-                  <PlatformBadge platform={order.platform} />
-                </InfoRow>
-                {order.external_id && (
-                  <InfoRow label="Order #">
-                    <span className="oms-order-id">#{order.external_id}</span>
-                  </InfoRow>
-                )}
-                {order.ship_by_date && (
-                  <InfoRow label="Ship By">
-                    {new Date(order.ship_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </InfoRow>
-                )}
-                {order.deliver_by_date && (
-                  <InfoRow label="Deliver By">
-                    {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </InfoRow>
-                )}
-                {order.ship_node && (
-                  <InfoRow label="Ship Node">{order.ship_node}</InfoRow>
-                )}
+                </div>
               </div>
+
+              {order.items?.length > 0 && (() => {
+                const total = order.items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
+                return total > 0 ? (
+                  <div>
+                    <div style={STAT_LABEL}>Order Total</div>
+                    <div style={STAT_VALUE}>${total.toFixed(2)}</div>
+                  </div>
+                ) : null
+              })()}
+
               <div>
-                {order.items?.length > 0 && (
-                  <InfoRow label="Order Total">
-                    {(() => {
-                      const total = order.items.reduce((sum, i) => sum + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
-                      return total > 0 ? `$${total.toFixed(2)}` : '—'
-                    })()}
-                  </InfoRow>
-                )}
-                <InfoRow label="Items">{order.items?.length ?? '—'}</InfoRow>
-                {order.tracking_number && (
-                  <InfoRow label="Tracking">
+                <div style={STAT_LABEL}>Platform</div>
+                <div style={{ marginTop: 2 }}><PlatformBadge platform={order.platform} /></div>
+              </div>
+
+              <div>
+                <div style={STAT_LABEL}>Items</div>
+                <div style={STAT_VALUE}>{order.items?.length ?? '—'}</div>
+              </div>
+
+              {order.ship_by_date && (
+                <div>
+                  <div style={STAT_LABEL}>Ship By</div>
+                  <div style={STAT_VALUE}>
+                    {new Date(order.ship_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              )}
+
+              {order.deliver_by_date && (
+                <div>
+                  <div style={STAT_LABEL}>Deliver By</div>
+                  <div style={STAT_VALUE}>
+                    {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </div>
+                </div>
+              )}
+
+              {order.ship_node && (
+                <div>
+                  <div style={STAT_LABEL}>Ship Node</div>
+                  <div style={STAT_VALUE}>{order.ship_node}</div>
+                </div>
+              )}
+
+              {order.tracking_number && (
+                <div style={{ gridColumn: 'span 2' }}>
+                  <div style={STAT_LABEL}>Tracking Number</div>
+                  <div style={{ marginTop: 2 }}>
                     {trackingUrl(order.tracking_number) ? (
                       <a href={trackingUrl(order.tracking_number)} target="_blank" rel="noopener noreferrer"
                         className="oms-order-id"
-                        style={{ color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                        style={{ fontSize: 13, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
                         {order.tracking_number}
                       </a>
                     ) : (
-                      <span className="oms-order-id">{order.tracking_number}</span>
+                      <span className="oms-order-id" style={{ fontSize: 13 }}>{order.tracking_number}</span>
                     )}
-                  </InfoRow>
-                )}
-                {order.notes && (
-                  <InfoRow label="Notes">
-                    <span style={{ color: 'var(--oms-text-secondary)' }}>{order.notes}</span>
-                  </InfoRow>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
+
+              {order.notes && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={STAT_LABEL}>Notes</div>
+                  <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', marginTop: 2 }}>{order.notes}</div>
+                </div>
+              )}
+
             </div>
           </PanelBody>
         </Panel>
 
         {/* Status stepper */}
         <Panel>
-          <PanelBody>
-            <StatusStepper currentStatus={order.status} />
-          </PanelBody>
+          <StatusStepper currentStatus={order.status} />
         </Panel>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
