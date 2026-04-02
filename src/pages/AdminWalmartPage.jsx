@@ -71,8 +71,8 @@ export default function AdminWalmartPage() {
   const handleBackfill = async (e) => {
     e.preventDefault()
     try {
-      const result = await backfillMutation.mutateAsync(backfillDate)
-      showToast(`Backfill done: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
+      await backfillMutation.mutateAsync(backfillDate)
+      showToast('Backfill started — check sync log in a minute for results')
     } catch (err) {
       showToast(err.response?.data?.error?.message || 'Backfill failed', 'error')
     }
