@@ -132,16 +132,23 @@ export default function OrderDetailPage() {
               <div>
                 <div style={STAT_LABEL}>Order Date</div>
                 <div style={STAT_VALUE}>
-                  {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  {order.order_date 
+                    ? new Date(order.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                    : new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                  }
                 </div>
               </div>
 
-              {order.items?.length > 0 && (() => {
-                const total = order.items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
+              {(() => {
+                // Use marketplace-provided total if available, otherwise calculate from items
+                const total = order.order_total || 
+                  (order.items?.length > 0 
+                    ? order.items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
+                    : 0);
                 return total > 0 ? (
                   <div>
                     <div style={STAT_LABEL}>Order Total</div>
-                    <div style={STAT_VALUE}>${total.toFixed(2)}</div>
+                    <div style={STAT_VALUE}>${parseFloat(total).toFixed(2)}</div>
                   </div>
                 ) : null
               })()}
