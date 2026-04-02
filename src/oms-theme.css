@@ -1,0 +1,301 @@
+/* ============================================================
+   OMS DESIGN SYSTEM — Global CSS
+   Drop this file into src/oms-theme.css and import in main.jsx
+   ============================================================ */
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens ── */
+:root {
+  /* Brand */
+  --oms-navy:        #0C447C;
+  --oms-navy-mid:    #185FA5;
+  --oms-navy-light:  #378ADD;
+  --oms-navy-pale:   #E6F1FB;
+  --oms-navy-accent: #85B7EB;
+
+  /* Page */
+  --oms-page-bg:     #F4F5F7;
+  --oms-surface:     #ffffff;
+  --oms-surface-alt: #F9FAFB;
+  --oms-surface-dim: #FAFBFC;
+
+  /* Borders */
+  --oms-border:      #E8EAF0;
+  --oms-border-mid:  #E0E4EB;
+  --oms-border-soft: #F1F3F5;
+  --oms-border-row:  #F8F9FA;
+
+  /* Text */
+  --oms-text-primary:   #1A1D23;
+  --oms-text-secondary: #6B7280;
+  --oms-text-muted:     #9CA3AF;
+
+  /* Status colors — use consistently everywhere */
+  --oms-new-bg:        #E6F1FB; --oms-new-text:        #185FA5; --oms-new-dot:        #378ADD;
+  --oms-label-bg:      #EAF3DE; --oms-label-text:      #3B6D11; --oms-label-dot:      #639922;
+  --oms-inventory-bg:  #FFF8ED; --oms-inventory-text:  #92400E; --oms-inventory-dot:  #D97706;
+  --oms-packed-bg:     #EEEDFE; --oms-packed-text:     #3C3489; --oms-packed-dot:     #534AB7;
+  --oms-ready-bg:      #FDF2F8; --oms-ready-text:      #831843; --oms-ready-dot:      #9D174D;
+  --oms-shipped-bg:    #F1F3F5;   --oms-shipped-text:    #6B7280; --oms-shipped-dot:    #9CA3AF;
+  --oms-delivered-bg:  #CCFBF1;  --oms-delivered-text:  #0D7C66; --oms-delivered-dot:  #0D9488;
+
+  /* Platform badges */
+  --oms-walmart-bg:    #FFF3E0; --oms-walmart-text:    #E65100;
+  --oms-manual-bg:     #F1F3F5; --oms-manual-text:     #6B7280;
+  --oms-ebay-bg:       #E6F1FB; --oms-ebay-text:       #185FA5;
+  --oms-amazon-bg:     #FFF8ED; --oms-amazon-text:     #92400E;
+
+  /* Confidence */
+  --oms-conf-high-bg:  #EAF3DE; --oms-conf-high:       #639922;
+  --oms-conf-mid-bg:   #FFF8ED; --oms-conf-mid:        #D97706;
+  --oms-conf-low-bg:   #FEE2E2; --oms-conf-low:        #DC2626;
+
+  /* Radius */
+  --oms-radius-sm:  6px;
+  --oms-radius-md:  8px;
+  --oms-radius-lg:  12px;
+  --oms-radius-pill:20px;
+
+  /* Sidebar */
+  --oms-sidebar-width: 220px;
+  --oms-topbar-height: 54px;
+}
+
+/* ── Base ── */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  background: var(--oms-page-bg);
+  color: var(--oms-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── App shell ── */
+.oms-shell        { display: flex; height: 100vh; overflow: hidden; }
+.oms-main         { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--oms-page-bg); }
+.oms-content      { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── Sidebar ── */
+.oms-sidebar      { width: var(--oms-sidebar-width); flex-shrink: 0; background: var(--oms-navy); display: flex; flex-direction: column; }
+.oms-sb-brand     { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.oms-sb-brand-title { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
+.oms-sb-brand-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
+.oms-sb-section   { padding: 10px 0; flex: 1; overflow-y: auto; }
+.oms-sb-label     { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 20px; margin: 12px 0 4px; }
+.oms-nav-item     { display: flex; align-items: center; gap: 10px; padding: 8px 20px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+.oms-nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
+.oms-nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left-color: var(--oms-navy-accent); }
+.oms-nav-badge    { margin-left: auto; background: rgba(255,255,255,0.18); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--oms-radius-pill); }
+.oms-sb-footer    { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
+.oms-sb-username  { font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 500; }
+.oms-sb-userrole  { font-size: 10px; color: rgba(255,255,255,0.4); }
+
+/* ── Avatar ── */
+.oms-avatar       { width: 32px; height: 32px; border-radius: 50%; background: var(--oms-navy-light); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }
+
+/* ── Topbar ── */
+.oms-topbar       { height: var(--oms-topbar-height); background: var(--oms-surface); border-bottom: 1px solid var(--oms-border); display: flex; align-items: center; padding: 0 24px; gap: 10px; flex-shrink: 0; }
+.oms-topbar-title { font-size: 15px; font-weight: 600; color: var(--oms-text-primary); flex: 1; }
+
+/* ── Pills ── */
+.oms-pill         { font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: var(--oms-radius-pill); }
+.oms-pill-green   { background: var(--oms-label-bg);   color: var(--oms-label-text); }
+.oms-pill-blue    { background: var(--oms-navy-pale);  color: var(--oms-navy-mid); }
+
+/* ── Buttons ── */
+.oms-btn          { font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: var(--oms-radius-md); cursor: pointer; transition: all 0.12s; border: none; white-space: nowrap; }
+.oms-btn-primary  { background: var(--oms-navy-mid); color: #fff; }
+.oms-btn-primary:hover { background: var(--oms-navy); }
+.oms-btn-secondary{ background: var(--oms-surface); border: 1px solid #D1D5DB; color: #374151; }
+.oms-btn-secondary:hover { background: var(--oms-surface-alt); }
+.oms-btn-sm       { font-size: 12px; padding: 5px 10px; }
+.oms-btn-danger   { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+.oms-btn-danger:hover { background: #FCA5A5; }
+
+/* ── Panel / Card ── */
+.oms-panel        { background: var(--oms-surface); border: 1px solid var(--oms-border); border-radius: var(--oms-radius-lg); overflow: hidden; }
+.oms-panel-header { padding: 14px 18px; border-bottom: 1px solid var(--oms-border-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oms-panel-title  { font-size: 13px; font-weight: 600; color: var(--oms-text-primary); flex: 1; }
+.oms-panel-body   { padding: 16px 18px; }
+
+/* ── Status summary cards ── */
+.oms-stat-row     { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+.oms-stat-card    { background: var(--oms-surface); border: 1px solid var(--oms-border); border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: all 0.12s; }
+.oms-stat-card:hover { border-color: #B5D4F4; box-shadow: 0 2px 8px rgba(24,95,165,0.08); transform: translateY(-1px); }
+.oms-stat-dot     { width: 8px; height: 8px; border-radius: 50%; margin-bottom: 10px; }
+.oms-stat-num     { font-size: 26px; font-weight: 600; color: var(--oms-text-primary); line-height: 1; }
+.oms-stat-label   { font-size: 11px; color: var(--oms-text-secondary); margin-top: 4px; font-weight: 500; }
+
+/* ── Two-column layout ── */
+.oms-two-col      { display: grid; grid-template-columns: 1fr 360px; gap: 14px; }
+.oms-right-col    { display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Table ── */
+.oms-table        { width: 100%; border-collapse: collapse; }
+.oms-table th     { font-size: 11px; font-weight: 600; color: var(--oms-text-secondary); text-align: left; padding: 9px 18px; background: var(--oms-surface-dim); border-bottom: 1px solid var(--oms-border-soft); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; }
+.oms-table td     { font-size: 13px; color: var(--oms-text-primary); padding: 11px 18px; border-bottom: 1px solid var(--oms-border-row); vertical-align: middle; }
+.oms-table tbody tr { cursor: pointer; transition: background 0.1s; }
+.oms-table tbody tr:hover td { background: #F5F8FF; }
+.oms-table tr:last-child td { border-bottom: none; }
+
+/* ── Order ID ── */
+.oms-order-id     { font-family: "SF Mono", "Fira Code", "Courier New", monospace; font-size: 12px; color: var(--oms-text-secondary); font-weight: 500; }
+
+/* ── Platform badge ── */
+.oms-platform     { font-size: 11px; padding: 3px 8px; border-radius: 5px; font-weight: 600; white-space: nowrap; }
+.oms-platform-walmart { background: var(--oms-walmart-bg); color: var(--oms-walmart-text); }
+.oms-platform-manual  { background: var(--oms-manual-bg);  color: var(--oms-manual-text); }
+.oms-platform-ebay    { background: var(--oms-ebay-bg);    color: var(--oms-ebay-text); }
+.oms-platform-amazon  { background: var(--oms-amazon-bg);  color: var(--oms-amazon-text); }
+
+/* ── Status badge ── */
+.oms-status       { font-size: 11px; padding: 4px 10px; border-radius: var(--oms-radius-pill); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.oms-status::before { content: ''; display: block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+.oms-status-new       { background: var(--oms-new-bg);       color: var(--oms-new-text); }
+.oms-status-label     { background: var(--oms-label-bg);     color: var(--oms-label-text); }
+.oms-status-inventory { background: var(--oms-inventory-bg); color: var(--oms-inventory-text); }
+.oms-status-packed    { background: var(--oms-packed-bg);    color: var(--oms-packed-text); }
+.oms-status-ready     { background: var(--oms-ready-bg);     color: var(--oms-ready-text); }
+.oms-status-shipped   { background: var(--oms-shipped-bg);   color: var(--oms-shipped-text); }
+.oms-status-delivered { background: var(--oms-delivered-bg); color: var(--oms-delivered-text); }
+
+/* ── Status dot (standalone) ── */
+.oms-dot          { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.oms-dot-new       { background: var(--oms-new-dot); }
+.oms-dot-label     { background: var(--oms-label-dot); }
+.oms-dot-inventory { background: var(--oms-inventory-dot); }
+.oms-dot-packed    { background: var(--oms-packed-dot); }
+.oms-dot-ready     { background: var(--oms-ready-dot); }
+.oms-dot-shipped   { background: var(--oms-shipped-dot); }
+.oms-dot-delivered { background: var(--oms-delivered-dot); }
+
+/* ── Filter pills ── */
+.oms-filter-pill  { font-size: 11px; padding: 4px 10px; border-radius: var(--oms-radius-pill); border: 1px solid var(--oms-border-mid); background: var(--oms-surface-alt); color: var(--oms-text-secondary); cursor: pointer; font-weight: 500; transition: all 0.1s; white-space: nowrap; }
+.oms-filter-pill:hover { border-color: #B5D4F4; color: var(--oms-navy-mid); }
+.oms-filter-pill.active { border-color: var(--oms-navy-mid); background: var(--oms-navy-pale); color: var(--oms-navy-mid); }
+
+/* ── Search input ── */
+.oms-search       { font-size: 12px; padding: 6px 10px; border-radius: var(--oms-radius-md); border: 1px solid var(--oms-border-mid); background: var(--oms-surface-alt); color: var(--oms-text-primary); width: 160px; outline: none; transition: all 0.1s; }
+.oms-search:focus { border-color: var(--oms-navy-light); background: var(--oms-surface); box-shadow: 0 0 0 3px rgba(55,138,221,0.1); }
+
+/* ── View toggle ── */
+.oms-view-toggle  { display: flex; border: 1px solid var(--oms-border-mid); border-radius: var(--oms-radius-md); overflow: hidden; }
+.oms-vt-btn       { padding: 5px 12px; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--oms-text-secondary); background: var(--oms-surface); border: none; transition: all 0.1s; display: flex; align-items: center; gap: 5px; }
+.oms-vt-btn:not(:last-child) { border-right: 1px solid var(--oms-border-mid); }
+.oms-vt-btn.active { background: var(--oms-navy-mid); color: #fff; }
+
+/* ── Activity feed ── */
+.oms-activity-item { display: flex; gap: 12px; padding: 11px 18px; border-bottom: 1px solid var(--oms-border-row); }
+.oms-activity-item:last-child { border-bottom: none; }
+.oms-activity-text { font-size: 13px; color: var(--oms-text-primary); line-height: 1.4; }
+.oms-activity-sub  { font-size: 11px; color: var(--oms-text-muted); margin-top: 3px; }
+
+/* ── Walmart sync card ── */
+.oms-sync-live    { width: 8px; height: 8px; border-radius: 50%; background: var(--oms-label-dot); box-shadow: 0 0 0 3px var(--oms-label-bg); flex-shrink: 0; }
+.oms-sync-grid    { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.oms-sync-stat    { background: var(--oms-surface-alt); border: 1px solid var(--oms-border-soft); border-radius: var(--oms-radius-md); padding: 10px 12px; }
+.oms-sync-stat-num { font-size: 22px; font-weight: 600; color: var(--oms-text-primary); }
+.oms-sync-stat-lbl { font-size: 11px; color: var(--oms-text-muted); margin-top: 2px; font-weight: 500; }
+
+/* ── Confidence bar ── */
+.oms-conf-wrap    { display: flex; flex-direction: column; gap: 3px; }
+.oms-conf-track   { height: 4px; border-radius: 4px; overflow: hidden; width: 80px; }
+.oms-conf-fill    { height: 100%; border-radius: 4px; }
+.oms-conf-label   { font-size: 11px; font-weight: 600; }
+.oms-conf-high .oms-conf-track { background: var(--oms-conf-high-bg); }
+.oms-conf-high .oms-conf-fill  { background: var(--oms-conf-high); }
+.oms-conf-high .oms-conf-label { color: var(--oms-label-text); }
+.oms-conf-mid  .oms-conf-track { background: var(--oms-conf-mid-bg); }
+.oms-conf-mid  .oms-conf-fill  { background: var(--oms-conf-mid); }
+.oms-conf-mid  .oms-conf-label { color: var(--oms-inventory-text); }
+.oms-conf-low  .oms-conf-track { background: var(--oms-conf-low-bg); }
+.oms-conf-low  .oms-conf-fill  { background: var(--oms-conf-low); }
+.oms-conf-low  .oms-conf-label { color: #991B1B; }
+
+/* ── Upload zone ── */
+.oms-upload-zone  { border: 2px dashed #CBD5E1; border-radius: 10px; padding: 28px; text-align: center; cursor: pointer; transition: all 0.12s; margin: 16px 18px; }
+.oms-upload-zone:hover { border-color: var(--oms-navy-light); background: #F5F9FF; }
+.oms-upload-title { font-size: 14px; font-weight: 600; color: var(--oms-text-primary); margin-bottom: 4px; }
+.oms-upload-sub   { font-size: 12px; color: var(--oms-text-muted); }
+
+/* ── Tabs ── */
+.oms-tabs         { display: flex; border-bottom: 1px solid var(--oms-border); background: var(--oms-surface); }
+.oms-tab          { font-size: 13px; font-weight: 500; padding: 12px 20px; color: var(--oms-text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.12s; white-space: nowrap; }
+.oms-tab:hover    { color: var(--oms-navy-mid); }
+.oms-tab.active   { color: var(--oms-navy-mid); border-bottom-color: var(--oms-navy-mid); }
+
+/* ── Pagination ── */
+.oms-pagination   { display: flex; align-items: center; gap: 4px; padding: 12px 18px; border-top: 1px solid var(--oms-border-soft); justify-content: flex-end; }
+.oms-pg-btn       { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--oms-border-mid); background: var(--oms-surface); font-size: 12px; font-weight: 500; color: var(--oms-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+.oms-pg-btn.active{ background: var(--oms-navy-mid); border-color: var(--oms-navy-mid); color: #fff; }
+.oms-pg-btn:hover:not(.active) { border-color: var(--oms-navy-light); color: var(--oms-navy-mid); }
+.oms-pg-meta      { font-size: 12px; color: var(--oms-text-muted); margin-right: 8px; }
+
+/* ── Form elements ── */
+.oms-input        { font-size: 13px; padding: 8px 10px; border: 1px solid var(--oms-border-mid); border-radius: var(--oms-radius-md); background: var(--oms-surface-alt); color: var(--oms-text-primary); width: 100%; outline: none; transition: all 0.1s; }
+.oms-input:focus  { border-color: var(--oms-navy-light); background: var(--oms-surface); box-shadow: 0 0 0 3px rgba(55,138,221,0.1); }
+.oms-label        { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; display: block; }
+.oms-select       { font-size: 13px; padding: 8px 10px; border: 1px solid var(--oms-border-mid); border-radius: var(--oms-radius-md); background: var(--oms-surface-alt); color: var(--oms-text-primary); width: 100%; outline: none; }
+.oms-field        { display: flex; flex-direction: column; gap: 5px; }
+
+/* ── Modal ── */
+.oms-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.oms-modal        { background: var(--oms-surface); border-radius: var(--oms-radius-lg); border: 1px solid var(--oms-border); padding: 24px; width: 420px; max-width: 90vw; display: flex; flex-direction: column; gap: 16px; }
+.oms-modal-title  { font-size: 15px; font-weight: 600; color: var(--oms-text-primary); }
+.oms-modal-actions{ display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+
+/* ── Status stepper ── */
+.oms-stepper      { display: flex; align-items: center; padding: 16px 18px; gap: 0; }
+.oms-step         { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.oms-step-circle  { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; border: 2px solid var(--oms-border); background: var(--oms-surface); color: var(--oms-text-muted); z-index: 1; }
+.oms-step.done .oms-step-circle  { background: var(--oms-label-bg); border-color: var(--oms-label-dot); color: var(--oms-label-text); }
+.oms-step.current .oms-step-circle { background: var(--oms-navy-mid); border-color: var(--oms-navy-mid); color: #fff; }
+.oms-step-label   { font-size: 10px; font-weight: 500; color: var(--oms-text-muted); margin-top: 5px; text-align: center; white-space: nowrap; }
+.oms-step.done .oms-step-label   { color: var(--oms-label-text); }
+.oms-step.current .oms-step-label { color: var(--oms-navy-mid); font-weight: 600; }
+.oms-step-line    { position: absolute; top: 14px; left: 50%; right: -50%; height: 2px; background: var(--oms-border); z-index: 0; }
+.oms-step.done .oms-step-line    { background: var(--oms-label-dot); }
+.oms-step:last-child .oms-step-line { display: none; }
+
+/* ── Toast ── */
+.oms-toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+.oms-toast        { padding: 12px 16px; border-radius: var(--oms-radius-md); font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); animation: oms-slide-in 0.2s ease; min-width: 240px; }
+.oms-toast-success { background: var(--oms-label-bg); color: var(--oms-label-text); border: 1px solid #C6E7A3; }
+.oms-toast-error   { background: #FEE2E2; color: #DC2626; border: 1px solid #FECACA; }
+.oms-toast-info    { background: var(--oms-navy-pale); color: var(--oms-navy-mid); border: 1px solid #B5D4F4; }
+@keyframes oms-slide-in { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* ── Empty state ── */
+.oms-empty        { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; text-align: center; }
+.oms-empty-title  { font-size: 14px; font-weight: 600; color: var(--oms-text-primary); margin-bottom: 6px; }
+.oms-empty-sub    { font-size: 13px; color: var(--oms-text-muted); margin-bottom: 16px; }
+
+/* ── Loading skeleton ── */
+.oms-skeleton     { background: linear-gradient(90deg, #F0F0F0 25%, #E0E0E0 50%, #F0F0F0 75%); background-size: 200% 100%; animation: oms-shimmer 1.5s infinite; border-radius: 4px; }
+@keyframes oms-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── Utility ── */
+.oms-text-muted   { color: var(--oms-text-muted); }
+.oms-text-secondary { color: var(--oms-text-secondary); }
+.oms-font-mono    { font-family: "SF Mono", "Fira Code", "Courier New", monospace; }
+.oms-fw-500       { font-weight: 500; }
+.oms-fw-600       { font-weight: 600; }
+.oms-gap-8        { gap: 8px; }
+.oms-flex-center  { display: flex; align-items: center; }
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 768px) {
+  .oms-sidebar    { display: none; }
+  .oms-stat-row   { grid-template-columns: repeat(3, 1fr); }
+  .oms-two-col    { grid-template-columns: 1fr; }
+  .oms-mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: var(--oms-surface); border-top: 1px solid var(--oms-border); z-index: 40; }
+  .oms-mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--oms-text-muted); cursor: pointer; padding: 8px 4px; }
+  .oms-mobile-nav-item.active { color: var(--oms-navy-mid); }
+  .oms-content    { padding: 16px; padding-bottom: 72px; }
+}
+@media (min-width: 769px) {
+  .oms-mobile-nav { display: none; }
+}

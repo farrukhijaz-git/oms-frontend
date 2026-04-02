@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import { UploadProvider } from './context/UploadContext'
+import { ToastProvider } from './components.jsx'
 import Layout from './components/Layout'
-import ToastContainer from './components/Toast'
 import LoginPage from './pages/LoginPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 import AuthErrorPage from './pages/AuthErrorPage'
@@ -28,8 +28,8 @@ function RequireAdmin({ children }) {
 
 export default function App() {
   return (
+    <ToastProvider>
     <UploadProvider>
-      <ToastContainer />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -44,5 +44,6 @@ export default function App() {
         </Route>
       </Routes>
     </UploadProvider>
+    </ToastProvider>
   )
 }
