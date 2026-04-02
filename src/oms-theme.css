@@ -95,7 +95,7 @@ body {
 /* ── App shell ── */
 .oms-shell        { display: flex; height: 100vh; overflow: hidden; }
 .oms-main         { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--oms-page-bg); }
-.oms-content      { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+.oms-content      { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ── Sidebar ── */
 .oms-sidebar      { width: var(--oms-sidebar-width); flex-shrink: 0; background: var(--oms-navy); display: flex; flex-direction: column; transition: width 0.18s ease; overflow: hidden; }
@@ -149,7 +149,7 @@ body {
 .oms-btn-danger:hover { background: #FCA5A5; }
 
 /* ── Panel / Card ── */
-.oms-panel        { background: var(--oms-surface); border: 1px solid var(--oms-border); border-radius: var(--oms-radius-lg); overflow: hidden; }
+.oms-panel        { background: var(--oms-surface); border: 1px solid var(--oms-border); border-radius: var(--oms-radius-lg); overflow: hidden; flex-shrink: 0; }
 .oms-panel-header { padding: 14px 18px; border-bottom: 1px solid var(--oms-border-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .oms-panel-title  { font-size: 13px; font-weight: 600; color: var(--oms-text-primary); flex: 1; }
 .oms-panel-body   { padding: 16px 18px; }

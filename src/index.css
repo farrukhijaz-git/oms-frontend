@@ -1,27 +1,21 @@
-/* Tailwind utilities only - base reset disabled to prevent conflicts with oms-theme.css */
+@tailwind base;
+@tailwind components;
 @tailwind utilities;
 
-/* Legacy styles - kept for backwards compatibility but oms-theme.css is now primary */
 body {
-  background: #F0F4F8;
-  color: #111827;
+  @apply bg-[#F0F4F8] text-gray-900;
 }
 
-.card {
-  background: white;
-  border-radius: 0.75rem;
-  border: 0.5px solid #E2E8F0;
-}
+@layer components {
+  /* Shared card style — 0.5px border, no shadow */
+  .card {
+    @apply bg-white rounded-xl;
+    border: 0.5px solid #E2E8F0;
+  }
 
-.topbar {
-  height: 50px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem;
-  border-bottom: 0.5px solid #E8EEF4;
+  /* Topbar inside page content */
+  .topbar {
+    @apply h-[50px] sticky top-0 z-10 bg-white flex items-center justify-between px-6;
+    border-bottom: 0.5px solid #E8EEF4;
+  }
 }
