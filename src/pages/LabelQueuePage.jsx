@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
 import { useUploadContext } from '../context/UploadContext'
-import { showToast } from '../components/Toast'
+import {
+  Topbar, Panel, BtnPrimary, BtnSecondary,
+  Modal, ModalActions, Tabs, ConfidenceBar,
+  StatusBadge, EmptyState, TableSkeleton, useToast,
+} from '../components.jsx'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 const EyeIcon = () => (
@@ -19,6 +23,14 @@ const WarningIcon = () => (
   </svg>
 )
 
+const UploadIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+    <polyline points="17 8 12 3 7 8"/>
+    <line x1="12" y1="3" x2="12" y2="15"/>
+  </svg>
+)
+
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 /** "p3_document-abc.pdf" → "Page 3" | "document.pdf" → "Label" */
@@ -27,79 +39,33 @@ function labelDisplay(filename) {
   return m ? `Page ${m[1]}` : 'Label'
 }
 
-/** Inline status badge matching global STATUS_CONFIG colours */
-const STATUS_STYLES = {
-  new:               { color: '#185FA5', background: '#E6F1FB' },
-  label_generated:   { color: '#3B6D11', background: '#EAF3DE' },
-  inventory_ordered: { color: '#92400E', background: '#FFF8ED' },
-  packed:            { color: '#3C3489', background: '#EEEDFE' },
-  ready:             { color: '#831843', background: '#FDF2F8' },
-  shipped:           { color: '#6B7280', background: '#F3F4F6' },
-  delivered:         { color: '#0D7C66', background: '#CCFBF1' },
-}
-function StatusBadge({ status }) {
-  const style = STATUS_STYLES[status] || { color: '#6B7280', background: '#F3F4F6' }
-  return (
-    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold" style={style}>
-      {status?.replace('_', ' ')}
-    </span>
-  )
-}
-
 // ── PreviewButton ─────────────────────────────────────────────────────────────
 function PreviewButton({ labelId }) {
+  const toast = useToast()
   const getUrl = useGetLabelUrl()
   const handleClick = async () => {
     try {
       const { url } = await getUrl.mutateAsync(labelId)
       window.open(url, '_blank', 'noopener')
     } catch {
-      showToast('Could not load preview', 'error')
+      toast.error('Could not load preview')
     }
   }
   return (
-    <button
-      onClick={handleClick}
-      disabled={getUrl.isPending}
-      title="Preview label PDF"
-      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs text-gray-500 border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
-    >
+    <BtnSecondary size="sm" onClick={handleClick} disabled={getUrl.isPending}>
       <EyeIcon />
-      {getUrl.isPending ? '…' : 'View'}
-    </button>
-  )
-}
-
-// ── ConfidenceBadge ───────────────────────────────────────────────────────────
-function ConfidenceBadge({ score }) {
-  const pct = Math.round((score || 0) * 100)
-  const style =
-    score >= 0.85 ? { color: '#639922', background: '#EAF3DE' } :
-    score >= 0.65 ? { color: '#BA7517', background: '#FAEEDA' } :
-                   { color: '#993556', background: '#FBEAF0' }
-  return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={style}>
-      {pct}%
-    </span>
+      {getUrl.isPending ? '…' : ' View'}
+    </BtnSecondary>
   )
 }
 
 // ── OrderHoverCard ────────────────────────────────────────────────────────────
-/**
- * Shows a popover with matched order details when user hovers the customer name.
- * The data comes directly from the queue row (joined in the SQL), no extra fetch.
- */
 function OrderHoverCard({ label, children }) {
   const [visible, setVisible] = useState(false)
   const timerRef = useRef(null)
 
-  const show = () => {
-    clearTimeout(timerRef.current)
-    setVisible(true)
-  }
-  const hide = () => {
-    timerRef.current = setTimeout(() => setVisible(false), 120)
-  }
+  const show = () => { clearTimeout(timerRef.current); setVisible(true) }
+  const hide = () => { timerRef.current = setTimeout(() => setVisible(false), 120) }
 
   const hasAddress = label.matched_address_line1 || label.matched_city
   const addressParts = [
@@ -110,33 +76,35 @@ function OrderHoverCard({ label, children }) {
   ].filter(Boolean)
 
   return (
-    <div className="relative inline-block" onMouseEnter={show} onMouseLeave={hide}>
+    <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={show} onMouseLeave={hide}>
       {children}
       {visible && (
         <div
-          className="absolute z-50 left-0 top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl p-3 w-56 text-xs"
+          style={{
+            position: 'absolute', zIndex: 50, left: 0, top: '100%', marginTop: 6,
+            background: '#fff', border: '1px solid var(--oms-border)', borderRadius: 10,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 12, width: 224, fontSize: 12,
+          }}
           onMouseEnter={show}
           onMouseLeave={hide}
         >
-          <div className="font-semibold text-gray-800 mb-1 flex items-center gap-2">
+          <div style={{ fontWeight: 600, color: 'var(--oms-text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
             {label.matched_customer_name}
-            {label.matched_order_status && (
-              <StatusBadge status={label.matched_order_status} />
-            )}
+            {label.matched_order_status && <StatusBadge status={label.matched_order_status} />}
           </div>
           {label.matched_order_external_id && (
-            <div className="font-mono text-[11px] text-gray-400 mb-2">
+            <div className="oms-order-id" style={{ fontSize: 11, marginBottom: 6 }}>
               #{label.matched_order_external_id}
             </div>
           )}
           {hasAddress && (
-            <div className="text-gray-500 leading-relaxed">
+            <div className="oms-text-muted" style={{ lineHeight: 1.7 }}>
               {addressParts.map((p, i) => <div key={i}>{p}</div>)}
             </div>
           )}
           {label.order_tracking_number && (
-            <div className="mt-2 pt-2 border-t border-gray-100 font-mono text-[10px] text-gray-400">
-              <span className="text-gray-500 font-sans font-medium">Tracking: </span>
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--oms-border)' }} className="oms-order-id">
+              <span style={{ fontFamily: 'inherit', fontWeight: 500, fontSize: 11 }}>Tracking: </span>
               {label.order_tracking_number}
             </div>
           )}
@@ -148,6 +116,7 @@ function OrderHoverCard({ label, children }) {
 
 // ── AssignModal ───────────────────────────────────────────────────────────────
 function AssignModal({ label, onClose }) {
+  const toast = useToast()
   const confirmMutation = useConfirmLabel()
   const assignMutation = useAssignLabel()
   const [orderId, setOrderId] = useState('')
@@ -163,7 +132,6 @@ function AssignModal({ label, onClose }) {
   const { data } = useOrders({ limit: 50, status: 'new,label_generated,inventory_ordered,packed,ready' })
   const orders = data?.orders || []
 
-  // Center modal on mount
   useEffect(() => {
     if (modalRef.current) {
       const rect = modalRef.current.getBoundingClientRect()
@@ -174,7 +142,6 @@ function AssignModal({ label, onClose }) {
     }
   }, [])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -188,7 +155,6 @@ function AssignModal({ label, onClose }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Drag handling
   const handleMouseDown = (e) => {
     if (e.target.closest('.modal-content')) return
     setIsDragging(true)
@@ -234,31 +200,32 @@ function AssignModal({ label, onClose }) {
       } else {
         await assignMutation.mutateAsync({ labelId: label.id, orderId })
       }
-      showToast('Label assigned')
+      toast.success('Label assigned')
       onClose()
     } catch {
-      showToast('Failed to assign', 'error')
+      toast.error('Failed to assign')
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div className="oms-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div
         ref={modalRef}
-        className="bg-white rounded-xl w-full max-w-md shadow-2xl"
+        className="oms-modal"
         style={{ position: 'absolute', left: `${position.x}px`, top: `${position.y}px`, cursor: isDragging ? 'grabbing' : 'grab' }}
       >
-        <div onMouseDown={handleMouseDown} className="px-6 pt-6 pb-3 border-b border-gray-100 select-none">
-          <h3 className="font-semibold text-gray-900 mb-1">Assign to Order</h3>
-          <p className="text-xs text-gray-400">{label.original_filename}</p>
+        <div onMouseDown={handleMouseDown} style={{ paddingBottom: 12, borderBottom: '1px solid var(--oms-border)', userSelect: 'none' }}>
+          <div className="oms-modal-title">Assign to Order</div>
+          <div className="oms-text-muted" style={{ fontSize: 11, marginTop: 2 }}>{label.original_filename}</div>
         </div>
 
-        <div className="modal-content p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
+        <div className="modal-content" style={{ paddingTop: 16 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ position: 'relative' }}>
               <input
                 ref={searchInputRef}
                 type="text"
+                className="oms-input"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value)
@@ -266,25 +233,35 @@ function AssignModal({ label, onClose }) {
                   if (!e.target.value) setOrderId('')
                 }}
                 onFocus={() => setShowDropdown(true)}
-                placeholder="Search orders by order #, name, city, state..."
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                placeholder="Search by order #, name, city, state…"
               />
               {showDropdown && (
-                <div ref={dropdownRef} className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div
+                  ref={dropdownRef}
+                  style={{
+                    position: 'absolute', zIndex: 10, width: '100%', marginTop: 4,
+                    background: '#fff', border: '1px solid var(--oms-border)', borderRadius: 8,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.1)', maxHeight: 240, overflowY: 'auto',
+                  }}
+                >
                   {filteredOrders.length === 0 ? (
-                    <div className="px-3 py-2 text-sm text-gray-400">No orders found</div>
+                    <div style={{ padding: '8px 12px', fontSize: 13, color: 'var(--oms-text-muted)' }}>No orders found</div>
                   ) : (
                     filteredOrders.map(o => (
                       <button
                         key={o.id}
                         type="button"
                         onClick={() => handleSelectOrder(o)}
-                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b border-gray-50 last:border-0 ${o.id === orderId ? 'bg-blue-50' : ''}`}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: 13,
+                          background: o.id === orderId ? 'var(--oms-navy-pale)' : 'transparent',
+                          border: 'none', borderBottom: '1px solid var(--oms-border)', cursor: 'pointer',
+                        }}
                       >
-                        <div className="font-medium text-gray-900">
+                        <div style={{ fontWeight: 500, color: 'var(--oms-text-primary)' }}>
                           {o.external_id ? `#${o.external_id}` : o.id.slice(0, 8)}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="oms-text-muted" style={{ fontSize: 11 }}>
                           {o.customer_name} — {o.city}, {o.state}
                         </div>
                       </button>
@@ -295,24 +272,20 @@ function AssignModal({ label, onClose }) {
             </div>
 
             {selectedOrder && (
-              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
-                <div className="font-medium text-gray-700 mb-1">Selected Order:</div>
+              <div style={{ fontSize: 12, color: 'var(--oms-text-secondary)', background: 'var(--oms-page-bg)', borderRadius: 6, padding: 10 }}>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>Selected Order:</div>
                 <div>#{selectedOrder.external_id || selectedOrder.id.slice(0, 8)}</div>
                 <div>{selectedOrder.customer_name}</div>
                 <div>{selectedOrder.city}, {selectedOrder.state}</div>
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-                Cancel
-              </button>
-              <button type="submit" disabled={!orderId}
-                className="flex-1 px-4 py-2 bg-navy text-white rounded-lg text-sm hover:bg-navy-hover disabled:opacity-50 disabled:cursor-not-allowed">
+            <ModalActions>
+              <BtnSecondary onClick={onClose}>Cancel</BtnSecondary>
+              <BtnPrimary disabled={!orderId} loading={confirmMutation.isPending || assignMutation.isPending}>
                 Assign
-              </button>
-            </div>
+              </BtnPrimary>
+            </ModalActions>
           </form>
         </div>
       </div>
@@ -322,6 +295,7 @@ function AssignModal({ label, onClose }) {
 
 // ── LabelQueuePage ────────────────────────────────────────────────────────────
 export default function LabelQueuePage() {
+  const toast = useToast()
   const [tab, setTab] = useState('queue')
   const [assignModal, setAssignModal] = useState(null)
   const fileRef = useRef()
@@ -339,13 +313,12 @@ export default function LabelQueuePage() {
     if (!files.length) return
     try {
       const result = await uploadMutation.mutateAsync(files)
-      // result = { job_id, status: 'processing', total_files }
       if (result.job_id) {
         addJob(result.job_id, result.total_files)
-        showToast(`Processing ${result.total_files} file(s) in the background`)
+        toast.info(`Processing ${result.total_files} file(s) in the background`)
       }
     } catch {
-      showToast('Upload failed', 'error')
+      toast.error('Upload failed')
     }
     e.target.value = ''
   }
@@ -354,175 +327,147 @@ export default function LabelQueuePage() {
     if (!label.order_id) { setAssignModal(label); return }
     try {
       await confirmMutation.mutateAsync({ labelId: label.id, orderId: label.order_id })
-      showToast('Label confirmed')
+      toast.success('Label confirmed')
     } catch {
-      showToast('Failed to confirm', 'error')
+      toast.error('Failed to confirm')
     }
   }
 
+  const TABS = [
+    { value: 'queue', label: `Review Queue (${queue.length})` },
+    { value: 'unmatched', label: `Unmatched (${unmatched.length})` },
+  ]
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="oms-main">
 
-      {/* Topbar */}
-      <div className="topbar">
-        <h1 className="text-[15px] font-semibold text-gray-900">Label Queue</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-400">
-            {queue.length} pending · {unmatched.length} unmatched
-          </span>
-        </div>
-      </div>
+      <Topbar title="Label Queue">
+        <span className="oms-text-muted" style={{ fontSize: 12 }}>
+          {queue.length} pending · {unmatched.length} unmatched
+        </span>
+      </Topbar>
 
-      <div className="p-6">
+      <div className="oms-content">
 
         {/* Upload zone */}
         <div
-          className="card p-8 text-center mb-6 cursor-pointer hover:border-navy-accent transition-colors"
-          style={{ borderStyle: 'dashed' }}
+          className="oms-panel"
+          style={{ textAlign: 'center', cursor: 'pointer', borderStyle: 'dashed', padding: 32 }}
           onClick={() => fileRef.current?.click()}
         >
-          <input ref={fileRef} type="file" accept=".pdf" multiple className="hidden" onChange={handleUpload} />
+          <input ref={fileRef} type="file" accept=".pdf" multiple style={{ display: 'none' }} onChange={handleUpload} />
           {uploadMutation.isPending ? (
             <div>
-              <div className="text-sm text-gray-500 font-medium">Uploading…</div>
-              <div className="text-xs text-gray-400 mt-1">Starting background processing</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-text-secondary)' }}>Uploading…</div>
+              <div className="oms-text-muted" style={{ fontSize: 12, marginTop: 4 }}>Starting background processing</div>
             </div>
           ) : (
             <div>
-              <div className="w-10 h-10 rounded-xl bg-[#E6F1FB] flex items-center justify-center mx-auto mb-3">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#378ADD" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-                  <polyline points="17 8 12 3 7 8"/>
-                  <line x1="12" y1="3" x2="12" y2="15"/>
-                </svg>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--oms-navy-pale)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                <UploadIcon />
               </div>
-              <p className="text-sm font-medium text-gray-700">Click to upload PDFs</p>
-              <p className="text-xs text-gray-400 mt-1">Multi-page PDFs are split per label · processing runs in the background</p>
+              <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-text-primary)' }}>Click to upload PDFs</div>
+              <div className="oms-text-muted" style={{ fontSize: 12, marginTop: 4 }}>Multi-page PDFs are split per label · processing runs in the background</div>
             </div>
           )}
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
-          {[
-            { key: 'queue', label: `Review Queue (${queue.length})` },
-            { key: 'unmatched', label: `Unmatched (${unmatched.length})` },
-          ].map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`px-4 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                tab === key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
         {/* Review queue */}
         {tab === 'queue' && (
           queueLoading ? (
-            <div className="text-sm text-gray-400">Loading…</div>
+            <Panel><TableSkeleton rows={5} cols={7} /></Panel>
           ) : queue.length === 0 ? (
-            <div className="text-center py-16 text-sm text-gray-400">No labels pending review</div>
+            <EmptyState title="No labels pending review" sub="Upload PDF labels to get started." />
           ) : (
-            <div className="card overflow-x-auto">
-              <table className="w-full text-sm min-w-[860px]">
-                <thead className="border-b border-gray-100">
+            <Panel>
+              <table className="oms-table" style={{ minWidth: 860 }}>
+                <thead>
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Label</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Extracted Name</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Extracted Address</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Tracking (label)</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Matched Order</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Confidence</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Actions</th>
+                    <th>Label</th>
+                    <th>Extracted Name</th>
+                    <th>Extracted Address</th>
+                    <th>Tracking (label)</th>
+                    <th>Matched Order</th>
+                    <th>Confidence</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {queue.map(label => {
                     const isConflict = label.match_status === 'tracking_conflict'
                     return (
-                      <tr
-                        key={label.id}
-                        className={`hover:bg-gray-50/50 ${isConflict ? 'bg-amber-50/40' : ''}`}
-                      >
-                        <td className="px-5 py-3">
-                          <div className="flex items-center gap-2">
+                      <tr key={label.id} style={isConflict ? { background: 'rgba(245,158,11,0.05)' } : {}}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <PreviewButton labelId={label.id} />
-                            <span className="text-xs text-gray-500">{labelDisplay(label.original_filename)}</span>
+                            <span className="oms-text-muted" style={{ fontSize: 12 }}>{labelDisplay(label.original_filename)}</span>
                           </div>
                         </td>
 
-                        <td className="px-4 py-3 text-gray-700 text-sm font-medium">
+                        <td style={{ fontWeight: 500, fontSize: 13 }}>
                           {label.extracted_name || '—'}
                         </td>
 
-                        <td className="px-4 py-3 text-xs text-gray-400 max-w-[160px]">
-                          <span className="block truncate" title={label.extracted_address || ''}>
+                        <td>
+                          <span className="oms-text-muted" style={{ fontSize: 11, display: 'block', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={label.extracted_address || ''}>
                             {label.extracted_address || '—'}
                           </span>
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td>
                           {label.tracking_number ? (
-                            <span className="font-mono text-[11px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">
-                              {label.tracking_number}
-                            </span>
+                            <span className="oms-order-id">{label.tracking_number}</span>
                           ) : (
-                            <span className="text-xs text-gray-300">—</span>
+                            <span className="oms-text-muted">—</span>
                           )}
                         </td>
 
-                        <td className="px-4 py-3">
+                        <td>
                           {label.matched_customer_name ? (
-                            <div className="flex items-center gap-1.5">
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {isConflict && (
+                                  <span title="Tracking number points to a different order than name/address match" style={{ color: '#D97706', flexShrink: 0 }}>
+                                    <WarningIcon />
+                                  </span>
+                                )}
+                                <OrderHoverCard label={label}>
+                                  <span style={{ fontSize: 13, color: 'var(--oms-text-primary)', textDecoration: 'underline', textDecorationStyle: 'dotted', textDecorationColor: '#9CA3AF', cursor: 'default' }}>
+                                    {label.matched_customer_name}
+                                  </span>
+                                </OrderHoverCard>
+                                {label.matched_order_external_id && (
+                                  <span className="oms-order-id">#{label.matched_order_external_id}</span>
+                                )}
+                              </div>
                               {isConflict && (
-                                <span title="Tracking number points to a different order than name/address match" className="text-amber-500 flex-shrink-0">
-                                  <WarningIcon />
-                                </span>
-                              )}
-                              <OrderHoverCard label={label}>
-                                <span className="text-sm text-gray-700 underline decoration-dotted decoration-gray-400 cursor-default">
-                                  {label.matched_customer_name}
-                                </span>
-                              </OrderHoverCard>
-                              {label.matched_order_external_id && (
-                                <span className="font-mono text-[11px] text-gray-400">
-                                  #{label.matched_order_external_id}
-                                </span>
+                                <div style={{ fontSize: 10, color: '#D97706', marginTop: 2 }}>
+                                  Tracking → different order
+                                </div>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-300">—</span>
-                          )}
-                          {isConflict && (
-                            <div className="text-[10px] text-amber-600 mt-0.5">
-                              Tracking → different order
-                            </div>
+                            <span className="oms-text-muted">—</span>
                           )}
                         </td>
 
-                        <td className="px-4 py-3">
-                          <ConfidenceBadge score={label.match_confidence || 0} />
+                        <td>
+                          <ConfidenceBar score={label.match_confidence || 0} />
                         </td>
 
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
+                        <td>
+                          <div style={{ display: 'flex', gap: 8 }}>
                             <button
                               onClick={() => handleConfirm(label)}
-                              className="px-2.5 py-1 rounded-lg text-xs font-medium"
-                              style={{ color: '#639922', background: '#EAF3DE' }}
+                              className="oms-btn oms-btn-sm"
+                              style={{ color: 'var(--oms-label-text)', background: 'var(--oms-label-bg)', border: 'none' }}
                             >
                               Confirm
                             </button>
-                            <button
-                              onClick={() => setAssignModal(label)}
-                              className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50"
-                            >
-                              Change
-                            </button>
+                            <BtnSecondary size="sm" onClick={() => setAssignModal(label)}>Change</BtnSecondary>
                           </div>
                         </td>
                       </tr>
@@ -530,53 +475,53 @@ export default function LabelQueuePage() {
                   })}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           )
         )}
 
         {/* Unmatched */}
         {tab === 'unmatched' && (
           unmatched.length === 0 ? (
-            <div className="text-center py-16 text-sm text-gray-400">No unmatched labels</div>
+            <EmptyState title="No unmatched labels" sub="All labels have been matched to orders." />
           ) : (
-            <div className="card overflow-x-auto">
-              <table className="w-full text-sm min-w-[600px]">
-                <thead className="border-b border-gray-100">
+            <Panel>
+              <table className="oms-table" style={{ minWidth: 600 }}>
+                <thead>
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Label</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Extracted Name</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Address</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Tracking (label)</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Actions</th>
+                    <th>Label</th>
+                    <th>Extracted Name</th>
+                    <th>Address</th>
+                    <th>Tracking (label)</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {unmatched.map(label => (
-                    <tr key={label.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
+                    <tr key={label.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <PreviewButton labelId={label.id} />
-                          <span className="text-xs text-gray-500">{labelDisplay(label.original_filename)}</span>
+                          <span className="oms-text-muted" style={{ fontSize: 12 }}>{labelDisplay(label.original_filename)}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-gray-700 text-sm">{label.extracted_name || '—'}</td>
-                      <td className="px-4 py-3 text-xs text-gray-400 max-w-[200px] truncate">
-                        {label.extracted_address || '—'}
+                      <td style={{ fontSize: 13 }}>{label.extracted_name || '—'}</td>
+                      <td>
+                        <span className="oms-text-muted" style={{ fontSize: 11, display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {label.extracted_address || '—'}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {label.tracking_number ? (
-                          <span className="font-mono text-[11px] text-gray-500 bg-gray-50 px-1.5 py-0.5 rounded">
-                            {label.tracking_number}
-                          </span>
+                          <span className="oms-order-id">{label.tracking_number}</span>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="oms-text-muted">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <button
                           onClick={() => setAssignModal(label)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-medium"
-                          style={{ color: '#378ADD', background: '#E6F1FB' }}
+                          className="oms-btn oms-btn-sm"
+                          style={{ color: 'var(--oms-new-text)', background: 'var(--oms-new-bg)', border: 'none' }}
                         >
                           Assign
                         </button>
@@ -585,9 +530,10 @@ export default function LabelQueuePage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </Panel>
           )
         )}
+
       </div>
 
       {assignModal && <AssignModal label={assignModal} onClose={() => setAssignModal(null)} />}

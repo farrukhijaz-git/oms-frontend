@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
 import App from './App'
 import './index.css'
+import './oms-theme.css'
 
 const queryClient = new QueryClient({
   defaultOptions: {

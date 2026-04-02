@@ -51,13 +51,7 @@ function NavItem({ to, label, icon: Icon, exact }) {
     <NavLink
       to={to}
       end={exact}
-      className={({ isActive }) =>
-        `flex items-center gap-2.5 py-2.5 rounded-lg text-sm font-medium transition-all ${
-          isActive
-            ? 'text-white bg-white/10 border-l-[3px] border-navy-accent pl-[9px] pr-3'
-            : 'text-white/65 hover:text-white hover:bg-white/10 px-3'
-        }`
-      }
+      className={({ isActive }) => `oms-nav-item${isActive ? ' active' : ''}`}
     >
       <Icon />
       <span>{label}</span>
@@ -72,8 +66,11 @@ function UploadProgressCard({ job }) {
   const isError = job.status === 'error'
 
   return (
-    <div className="w-64 bg-white rounded-xl shadow-lg border border-gray-200 p-3 text-sm pointer-events-auto">
-      <div className="flex items-center gap-2 mb-2">
+    <div style={{
+      width: 256, background: '#fff', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+      border: '1px solid var(--oms-border)', padding: 12, fontSize: 12, pointerEvents: 'auto',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         {isDone ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#639922" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
@@ -83,36 +80,36 @@ function UploadProgressCard({ job }) {
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
         ) : (
-          <div className="w-3.5 h-3.5 border-2 border-[#185FA5] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+          <div style={{
+            width: 14, height: 14, border: '2px solid #185FA5', borderTopColor: 'transparent',
+            borderRadius: '50%', flexShrink: 0, animation: 'spin 0.8s linear infinite',
+          }} />
         )}
-        <span className="font-medium text-gray-800 text-xs">
+        <span style={{ fontWeight: 600, color: 'var(--oms-text-primary)', fontSize: 12 }}>
           {isDone ? 'Labels processed' : isError ? 'Processing failed' : 'Processing labels…'}
         </span>
       </div>
 
       {!isDone && !isError && job.total > 0 && (
         <>
-          <div className="text-xs text-gray-400 mb-1.5 truncate">
+          <div style={{ fontSize: 11, color: 'var(--oms-text-muted)', marginBottom: 6 }}>
             File {job.current} of {job.total}
             {job.current_file ? ` · ${job.current_file}` : ''}
           </div>
-          <div className="w-full bg-gray-100 rounded-full h-1">
-            <div
-              className="h-1 rounded-full bg-[#185FA5] transition-all duration-500"
-              style={{ width: `${pct}%` }}
-            />
+          <div style={{ width: '100%', height: 4, borderRadius: 4, background: 'var(--oms-page-bg)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 4, background: '#185FA5', width: `${pct}%`, transition: 'width 0.5s' }} />
           </div>
         </>
       )}
 
       {isDone && job.results && (
-        <div className="text-xs text-gray-400 mt-1">
+        <div style={{ fontSize: 11, color: 'var(--oms-text-muted)', marginTop: 4 }}>
           {job.results.filter(r => !r.error).length} label(s) ready for review
         </div>
       )}
 
       {isError && (
-        <div className="text-xs text-red-400 mt-1">{job.error || 'An unexpected error occurred'}</div>
+        <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>{job.error || 'An unexpected error occurred'}</div>
       )}
     </div>
   )
@@ -122,7 +119,7 @@ function UploadProgressIndicator() {
   const { activeJobs } = useUploadContext()
   if (activeJobs.length === 0) return null
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+    <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 50, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
       {activeJobs.map(job => <UploadProgressCard key={job.id} job={job} />)}
     </div>
   )
@@ -145,56 +142,39 @@ export default function Layout() {
     .toUpperCase()
 
   return (
-    <div className="min-h-screen flex bg-[#F0F4F8]">
+    <div className="oms-shell">
 
-      {/* ── Desktop Sidebar ─────────────────────────────────────────────────── */}
-      <aside
-        className="hidden md:flex flex-col w-[220px] fixed h-full z-20"
-        style={{ background: '#0C447C' }}
-      >
-        {/* Brand */}
-        <div className="px-5 pt-6 pb-5">
-          <div className="text-[22px] font-bold text-white tracking-tight">OMS</div>
-          <div className="text-[11px] text-white/40 mt-0.5 font-medium tracking-widest uppercase">
-            Order Management
-          </div>
+      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      <aside className="oms-sidebar">
+        <div className="oms-sb-brand">
+          <div className="oms-sb-brand-title">OMS</div>
+          <div className="oms-sb-brand-sub">Order Management</div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+        <nav className="oms-sb-section">
           {NAV_ITEMS.map(item => <NavItem key={item.to} {...item} />)}
 
           {isAdmin && (
             <>
-              <div className="pt-5 pb-1.5 px-3">
-                <span className="text-[10px] font-semibold tracking-widest uppercase text-white/30">
-                  Admin
-                </span>
-              </div>
+              <div className="oms-sb-label">Admin</div>
               {ADMIN_NAV_ITEMS.map(item => <NavItem key={item.to} {...item} />)}
             </>
           )}
         </nav>
 
-        {/* User profile */}
-        <div className="px-4 py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-              style={{ background: 'rgba(133,183,235,0.25)' }}
-            >
-              {initials}
+        <div className="oms-sb-footer">
+          <div className="oms-avatar">{initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="oms-sb-username" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.display_name || user?.email}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate leading-tight">
-                {user?.display_name || user?.email}
-              </p>
-              <p className="text-white/40 text-xs capitalize">{user?.role}</p>
-            </div>
+            <div className="oms-sb-userrole">{user?.role}</div>
           </div>
           <button
             onClick={handleLogout}
-            className="mt-3 text-xs text-white/35 hover:text-white/70 transition-colors"
+            style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.7)'}
+            onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.35)'}
           >
             Sign out
           </button>
@@ -202,25 +182,21 @@ export default function Layout() {
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────────────────── */}
-      <main className="flex-1 md:ml-[220px] flex flex-col min-h-screen pb-16 md:pb-0">
+      <main className="oms-main">
         <Outlet />
       </main>
 
-      {/* ── Global upload progress (persists across navigation) ──────────── */}
+      {/* ── Global upload progress ────────────────────────────────────────── */}
       <UploadProgressIndicator />
 
       {/* ── Mobile bottom bar ────────────────────────────────────────────────── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex z-20">
+      <nav className="oms-mobile-nav">
         {NAV_ITEMS.map(({ to, label, icon: Icon, exact }) => (
           <NavLink
             key={to}
             to={to}
             end={exact}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 text-xs gap-0.5 ${
-                isActive ? 'text-navy' : 'text-gray-400'
-              }`
-            }
+            className={({ isActive }) => `oms-mobile-nav-item${isActive ? ' active' : ''}`}
           >
             <Icon />
             <span>{label}</span>
@@ -230,11 +206,7 @@ export default function Layout() {
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center py-2 text-xs gap-0.5 ${
-                isActive ? 'text-navy' : 'text-gray-400'
-              }`
-            }
+            className={({ isActive }) => `oms-mobile-nav-item${isActive ? ' active' : ''}`}
           >
             <Icon />
             <span>{label}</span>

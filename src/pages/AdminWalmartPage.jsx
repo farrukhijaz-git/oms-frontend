@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { useWalmartStatus, useWalmartLog, usePollNow, useSaveCredentials, useUpdateSettings, useBackfill } from '../hooks/useWalmart'
-import { showToast } from '../components/Toast'
+import {
+  Topbar, Panel, PanelHeader, PanelTitle, PanelBody,
+  BtnPrimary, BtnSecondary, FormField, Input, Select, useToast,
+} from '../components.jsx'
 
 const INTERVALS = [
   { label: '5 minutes', value: 300 },
@@ -11,19 +14,18 @@ const INTERVALS = [
 
 function SyncStatusBadge({ status }) {
   const styles = {
-    success: { color: '#639922', bg: '#EAF3DE' },
-    partial:  { color: '#BA7517', bg: '#FAEEDA' },
-    error:    { color: '#993556', bg: '#FBEAF0' },
+    success: { color: 'var(--oms-label-text)', background: 'var(--oms-label-bg)' },
+    partial:  { color: 'var(--oms-inventory-text)', background: 'var(--oms-inventory-bg)' },
+    error:    { color: 'var(--oms-ready-text)', background: 'var(--oms-ready-bg)' },
   }
   const s = styles[status] || styles.error
   return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ color: s.color, background: s.bg }}>
-      {status}
-    </span>
+    <span className="oms-status" style={s}>{status}</span>
   )
 }
 
 export default function AdminWalmartPage() {
+  const toast = useToast()
   const { data: status, isLoading } = useWalmartStatus()
   const { data: logData } = useWalmartLog()
   const pollMutation = usePollNow()
@@ -42,29 +44,29 @@ export default function AdminWalmartPage() {
     e.preventDefault()
     try {
       await credsMutation.mutateAsync({ client_id: clientId, client_secret: clientSecret })
-      showToast('Credentials saved')
+      toast.success('Credentials saved')
       setClientId('')
       setClientSecret('')
     } catch {
-      showToast('Failed to save credentials', 'error')
+      toast.error('Failed to save credentials')
     }
   }
 
   const handleSaveInterval = async () => {
     try {
       await settingsMutation.mutateAsync({ poll_interval_seconds: interval })
-      showToast('Settings saved')
+      toast.success('Settings saved')
     } catch {
-      showToast('Failed to save settings', 'error')
+      toast.error('Failed to save settings')
     }
   }
 
   const handlePollNow = async () => {
     try {
       const result = await pollMutation.mutateAsync()
-      showToast(`Polled: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
+      toast.success(`Polled: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
     } catch (err) {
-      showToast(err.response?.data?.error?.message || 'Poll failed', 'error')
+      toast.error(err.response?.data?.error?.message || 'Poll failed')
     }
   }
 
@@ -72,140 +74,146 @@ export default function AdminWalmartPage() {
     e.preventDefault()
     try {
       await backfillMutation.mutateAsync(backfillDate)
-      showToast('Backfill started — check sync log in a minute for results')
+      toast.success('Backfill started — check sync log in a minute for results')
     } catch (err) {
-      showToast(err.response?.data?.error?.message || 'Backfill failed', 'error')
+      toast.error(err.response?.data?.error?.message || 'Backfill failed')
     }
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="oms-main">
 
-      {/* Topbar */}
-      <div className="topbar">
-        <h1 className="text-[15px] font-semibold text-gray-900">Walmart Integration</h1>
-        <button
+      <Topbar title="Walmart Integration">
+        <BtnPrimary
+          size="sm"
           onClick={handlePollNow}
-          disabled={pollMutation.isPending || !status?.configured}
-          className="px-3 py-1.5 bg-navy text-white rounded-lg text-xs hover:bg-navy-hover disabled:opacity-50"
+          disabled={!status?.configured}
+          loading={pollMutation.isPending}
         >
           {pollMutation.isPending ? 'Polling…' : 'Poll Now'}
-        </button>
-      </div>
+        </BtnPrimary>
+      </Topbar>
 
-      <div className="p-6 max-w-3xl space-y-4">
+      <div className="oms-content" style={{ maxWidth: 680 }}>
 
         {/* Connection status */}
-        <div className="card p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Connection</h2>
-          {isLoading ? (
-            <div className="text-sm text-gray-400">Loading…</div>
-          ) : (
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${status?.configured ? 'bg-green-500' : 'bg-red-400'}`} />
-                <span className={`text-sm font-medium ${status?.configured ? 'text-green-700' : 'text-red-600'}`}>
-                  {status?.configured ? 'Connected' : 'Not configured'}
-                </span>
+        <Panel>
+          <PanelHeader><PanelTitle>Connection</PanelTitle></PanelHeader>
+          <PanelBody>
+            {isLoading ? (
+              <span className="oms-text-muted" style={{ fontSize: 13 }}>Loading…</span>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: status?.configured ? 'var(--oms-label-text)' : '#EF4444' }} />
+                  <span style={{ fontSize: 13, fontWeight: 500, color: status?.configured ? 'var(--oms-label-text)' : '#EF4444' }}>
+                    {status?.configured ? 'Connected' : 'Not configured'}
+                  </span>
+                </div>
+                {status?.last_polled_at && (
+                  <span className="oms-text-muted" style={{ fontSize: 12 }}>
+                    Last poll: {new Date(status.last_polled_at).toLocaleString()}
+                  </span>
+                )}
               </div>
-              {status?.last_polled_at && (
-                <span className="text-xs text-gray-500">
-                  Last poll: {new Date(status.last_polled_at).toLocaleString()}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </PanelBody>
+        </Panel>
 
         {/* API credentials */}
-        <div className="card p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">API Credentials</h2>
-          <form onSubmit={handleSaveCreds} className="space-y-3">
-            <input
-              type="password" required value={clientId} onChange={e => setClientId(e.target.value)}
-              placeholder="Client ID"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            />
-            <input
-              type="password" required value={clientSecret} onChange={e => setClientSecret(e.target.value)}
-              placeholder="Client Secret"
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            />
-            <button type="submit" disabled={credsMutation.isPending}
-              className="px-4 py-2 bg-navy text-white text-sm rounded-lg hover:bg-navy-hover disabled:opacity-50">
-              {credsMutation.isPending ? 'Saving…' : 'Save Credentials'}
-            </button>
-          </form>
-        </div>
+        <Panel>
+          <PanelHeader><PanelTitle>API Credentials</PanelTitle></PanelHeader>
+          <PanelBody>
+            <form onSubmit={handleSaveCreds} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <FormField label="Client ID">
+                <input
+                  type="password" required className="oms-input"
+                  value={clientId} onChange={e => setClientId(e.target.value)}
+                  placeholder="Client ID"
+                />
+              </FormField>
+              <FormField label="Client Secret">
+                <input
+                  type="password" required className="oms-input"
+                  value={clientSecret} onChange={e => setClientSecret(e.target.value)}
+                  placeholder="Client Secret"
+                />
+              </FormField>
+              <div>
+                <BtnPrimary loading={credsMutation.isPending}>
+                  {credsMutation.isPending ? 'Saving…' : 'Save Credentials'}
+                </BtnPrimary>
+              </div>
+            </form>
+          </PanelBody>
+        </Panel>
 
         {/* Poll interval */}
-        <div className="card p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Poll Interval</h2>
-          <div className="flex items-center gap-3">
-            <select
-              value={interval}
-              onChange={e => setInterval(parseInt(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            >
-              {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
-            </select>
-            <button
-              onClick={handleSaveInterval}
-              disabled={settingsMutation.isPending}
-              className="px-4 py-2 bg-navy text-white text-sm rounded-lg hover:bg-navy-hover disabled:opacity-50"
-            >
-              Save
-            </button>
-          </div>
-        </div>
+        <Panel>
+          <PanelHeader><PanelTitle>Poll Interval</PanelTitle></PanelHeader>
+          <PanelBody>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Select value={interval} onChange={v => setInterval(parseInt(v))}>
+                {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+              </Select>
+              <BtnSecondary onClick={handleSaveInterval} loading={settingsMutation.isPending}>
+                Save
+              </BtnSecondary>
+            </div>
+          </PanelBody>
+        </Panel>
 
         {/* Backfill */}
-        <div className="card p-5">
-          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Import Historical Orders</h2>
-          <p className="text-xs text-gray-400 mb-3">Pull all Walmart orders from a specific date. Safe to re-run — duplicates are skipped.</p>
-          <form onSubmit={handleBackfill} className="flex items-center gap-3">
-            <input
-              type="date" required value={backfillDate} onChange={e => setBackfillDate(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-            />
-            <button type="submit" disabled={backfillMutation.isPending || !status?.configured}
-              className="px-4 py-2 bg-navy text-white text-sm rounded-lg hover:bg-navy-hover disabled:opacity-50">
-              {backfillMutation.isPending ? 'Importing…' : 'Import from date'}
-            </button>
-          </form>
-        </div>
+        <Panel>
+          <PanelHeader><PanelTitle>Import Historical Orders</PanelTitle></PanelHeader>
+          <PanelBody>
+            <div className="oms-text-muted" style={{ fontSize: 12, marginBottom: 12 }}>
+              Pull all Walmart orders from a specific date. Safe to re-run — duplicates are skipped.
+            </div>
+            <form onSubmit={handleBackfill} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input
+                type="date" required className="oms-input" style={{ width: 'auto' }}
+                value={backfillDate} onChange={e => setBackfillDate(e.target.value)}
+              />
+              <BtnPrimary
+                disabled={!status?.configured}
+                loading={backfillMutation.isPending}
+              >
+                {backfillMutation.isPending ? 'Importing…' : 'Import from date'}
+              </BtnPrimary>
+            </form>
+          </PanelBody>
+        </Panel>
 
         {/* Sync log */}
-        <div className="card overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900">Sync Log</h2>
-          </div>
+        <Panel>
+          <PanelHeader><PanelTitle>Sync Log</PanelTitle></PanelHeader>
           {log.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-gray-400">No sync history</p>
+            <PanelBody>
+              <span className="oms-text-muted" style={{ fontSize: 13 }}>No sync history</span>
+            </PanelBody>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[500px]">
-                <thead className="border-b border-gray-100">
+            <div style={{ overflowX: 'auto' }}>
+              <table className="oms-table" style={{ minWidth: 500 }}>
+                <thead>
                   <tr>
-                    <th className="text-left px-5 py-3 text-xs font-medium text-gray-500">Time</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Type</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Status</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Pulled</th>
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500">Error</th>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Pulled</th>
+                    <th>Error</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50">
+                <tbody>
                   {log.map(entry => (
-                    <tr key={entry.id} className="hover:bg-gray-50/50">
-                      <td className="px-5 py-3 text-xs text-gray-400 whitespace-nowrap">
+                    <tr key={entry.id}>
+                      <td className="oms-text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
                         {new Date(entry.synced_at).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">{entry.sync_type}</td>
-                      <td className="px-4 py-3">
-                        <SyncStatusBadge status={entry.status} />
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{entry.orders_pulled}</td>
-                      <td className="px-4 py-3 text-xs text-red-500 max-w-[200px] truncate">
+                      <td className="oms-text-secondary" style={{ fontSize: 12 }}>{entry.sync_type}</td>
+                      <td><SyncStatusBadge status={entry.status} /></td>
+                      <td className="oms-text-secondary">{entry.orders_pulled}</td>
+                      <td style={{ fontSize: 11, color: '#DC2626', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {entry.error_message || '—'}
                       </td>
                     </tr>
@@ -214,7 +222,8 @@ export default function AdminWalmartPage() {
               </table>
             </div>
           )}
-        </div>
+        </Panel>
+
       </div>
     </div>
   )
