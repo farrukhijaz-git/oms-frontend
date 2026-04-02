@@ -383,6 +383,7 @@ export default function LabelQueuePage() {
             <EmptyState title="No labels pending review" sub="Upload PDF labels to get started." />
           ) : (
             <Panel>
+              <div style={{ overflowX: 'auto' }}>
               <table className="oms-table" style={{ minWidth: 860 }}>
                 <thead>
                   <tr>
@@ -475,6 +476,7 @@ export default function LabelQueuePage() {
                   })}
                 </tbody>
               </table>
+              </div>
             </Panel>
           )
         )}
@@ -485,6 +487,7 @@ export default function LabelQueuePage() {
             <EmptyState title="No unmatched labels" sub="All labels have been matched to orders." />
           ) : (
             <Panel>
+              <div style={{ overflowX: 'auto' }}>
               <table className="oms-table" style={{ minWidth: 600 }}>
                 <thead>
                   <tr>
@@ -530,6 +533,7 @@ export default function LabelQueuePage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </Panel>
           )
         )}

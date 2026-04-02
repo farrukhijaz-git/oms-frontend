@@ -79,19 +79,33 @@ body {
 .oms-content      { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ── Sidebar ── */
-.oms-sidebar      { width: var(--oms-sidebar-width); flex-shrink: 0; background: var(--oms-navy); display: flex; flex-direction: column; }
-.oms-sb-brand     { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.oms-sb-brand-title { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.01em; }
-.oms-sb-brand-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; }
-.oms-sb-section   { padding: 10px 0; flex: 1; overflow-y: auto; }
-.oms-sb-label     { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 20px; margin: 12px 0 4px; }
-.oms-nav-item     { display: flex; align-items: center; gap: 10px; padding: 8px 20px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; text-decoration: none; }
+.oms-sidebar      { width: var(--oms-sidebar-width); flex-shrink: 0; background: var(--oms-navy); display: flex; flex-direction: column; transition: width 0.18s ease; overflow: hidden; }
+.oms-sb-brand     { padding: 16px 20px 14px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.oms-sb-brand-text { flex: 1; min-width: 0; }
+.oms-sb-brand-title { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: 0.01em; white-space: nowrap; }
+.oms-sb-brand-sub { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 3px; white-space: nowrap; }
+.oms-sb-toggle    { background: none; border: none; cursor: pointer; color: rgba(255,255,255,0.4); padding: 4px; border-radius: 4px; display: flex; align-items: center; flex-shrink: 0; }
+.oms-sb-toggle:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.oms-sb-section   { padding: 10px 0; flex: 1; overflow-y: auto; overflow-x: hidden; }
+.oms-sb-label     { font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.3); letter-spacing: 0.1em; text-transform: uppercase; padding: 0 20px; margin: 12px 0 4px; white-space: nowrap; overflow: hidden; }
+.oms-nav-item     { display: flex; align-items: center; gap: 10px; padding: 8px 20px; font-size: 13px; color: rgba(255,255,255,0.6); cursor: pointer; border-left: 2px solid transparent; transition: all 0.12s; text-decoration: none; white-space: nowrap; }
 .oms-nav-item:hover { background: rgba(255,255,255,0.07); color: #fff; }
 .oms-nav-item.active { background: rgba(255,255,255,0.12); color: #fff; border-left-color: var(--oms-navy-accent); }
 .oms-nav-badge    { margin-left: auto; background: rgba(255,255,255,0.18); color: #fff; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: var(--oms-radius-pill); }
-.oms-sb-footer    { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; }
-.oms-sb-username  { font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 500; }
+.oms-sb-footer    { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 10px; overflow: hidden; }
+.oms-sb-username  { font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .oms-sb-userrole  { font-size: 10px; color: rgba(255,255,255,0.4); }
+
+/* ── Sidebar collapsed ── */
+.oms-sb-collapsed { width: 52px; }
+.oms-sb-collapsed .oms-sb-brand { padding: 12px 0; justify-content: center; }
+.oms-sb-collapsed .oms-sb-brand-text { display: none; }
+.oms-sb-collapsed .oms-sb-label { display: none; }
+.oms-sb-collapsed .oms-nav-item { padding: 10px 0; justify-content: center; gap: 0; border-left: 2px solid transparent; }
+.oms-sb-collapsed .oms-nav-item > span { display: none; }
+.oms-sb-collapsed .oms-sb-footer { padding: 12px 0; justify-content: center; flex-direction: column; gap: 8px; }
+.oms-sb-collapsed .oms-sb-footer > div { display: none; }
+.oms-sb-collapsed .oms-sb-footer > button { display: none; }
 
 /* ── Avatar ── */
 .oms-avatar       { width: 32px; height: 32px; border-radius: 50%; background: var(--oms-navy-light); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #fff; flex-shrink: 0; }

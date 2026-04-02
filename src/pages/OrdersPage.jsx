@@ -79,11 +79,12 @@ export default function OrdersPage() {
   const navigate = useNavigate()
   const toast = useToast()
   const [filters, setFilters] = useState({ search: '', status: '', page: 1 })
+  const [limit, setLimit] = useState(20)
   const [statusModal, setStatusModal] = useState(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
   const importCsv = useImportCsv()
 
-  const { data, isLoading } = useOrders({ ...filters, limit: 20 })
+  const { data, isLoading } = useOrders({ ...filters, limit })
   const orders = data?.orders || []
 
   const handleCsvImport = async (e) => {
@@ -111,14 +112,14 @@ export default function OrdersPage() {
 
       <div className="oms-content">
 
-        {/* Search + status filter pills */}
+        {/* Search + status filter pills + row count */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <SearchBox
             value={filters.search}
             onChange={v => setFilters(f => ({ ...f, search: v, page: 1 }))}
             placeholder="Search by name or order ID…"
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
             <FilterPill
               active={!filters.status}
               onClick={() => setFilters(f => ({ ...f, status: '', page: 1 }))}
@@ -135,6 +136,17 @@ export default function OrdersPage() {
               </FilterPill>
             ))}
           </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: 'var(--oms-text-muted)', whiteSpace: 'nowrap' }}>Rows per page</span>
+            <select
+              className="oms-select"
+              value={limit}
+              onChange={e => { setLimit(Number(e.target.value)); setFilters(f => ({ ...f, page: 1 })) }}
+              style={{ width: 72, fontSize: 12, padding: '4px 8px' }}
+            >
+              {[20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
         </div>
 
         {/* Orders table */}
@@ -144,7 +156,8 @@ export default function OrdersPage() {
           ) : orders.length === 0 ? (
             <EmptyState title="No orders found" sub="Try adjusting your filters or create a new order." />
           ) : (
-            <table className="oms-table">
+            <div style={{ overflowX: 'auto' }}>
+            <table className="oms-table" style={{ minWidth: 700 }}>
               <thead>
                 <tr>
                   <th>Order ID</th>
@@ -152,7 +165,8 @@ export default function OrdersPage() {
                   <th>Platform</th>
                   <th>Items</th>
                   <th>Status</th>
-                  <th>Created</th>
+                  <th>Order Date</th>
+                  <th>Tracking</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -180,8 +194,14 @@ export default function OrdersPage() {
                         <StatusBadge status={order.status} />
                       </button>
                     </td>
-                    <td className="oms-text-muted" style={{ fontSize: 12 }}>
-                      {new Date(order.created_at).toLocaleDateString()}
+                    <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </td>
+                    <td style={{ fontSize: 12 }}>
+                      {order.tracking_number
+                        ? <span className="oms-order-id" style={{ fontSize: 11 }}>{order.tracking_number}</span>
+                        : <span className="oms-text-muted">—</span>
+                      }
                     </td>
                     <td>
                       <button
@@ -195,14 +215,15 @@ export default function OrdersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </Panel>
 
-        {data?.total > 20 && (
+        {data?.total > limit && (
           <Pagination
             page={filters.page}
             total={data.total}
-            limit={20}
+            limit={limit}
             onChange={p => setFilters(f => ({ ...f, page: p }))}
           />
         )}

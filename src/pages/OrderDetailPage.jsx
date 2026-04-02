@@ -15,6 +15,24 @@ const STATUS_LABEL = {
   packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered',
 }
 
+function trackingUrl(tn) {
+  if (!tn) return null
+  if (/^1Z[A-Z0-9]{16}$/i.test(tn)) return `https://www.ups.com/track?tracknum=${tn}`
+  if (/^(9[2345][0-9]{20,}|420[0-9]{5}9[0-9]{21,})/.test(tn)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
+  if (/^[A-Z]{2}[0-9]{9}US$/.test(tn)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
+  if (/^[0-9]{12,22}$/.test(tn)) return `https://www.fedex.com/fedextrack/?trknbr=${tn}`
+  return null
+}
+
+function InfoRow({ label, children }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', padding: '5px 0', borderBottom: '1px solid var(--oms-border-soft)' }}>
+      <span style={{ fontSize: 12, color: 'var(--oms-text-muted)', minWidth: 110, flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: 13, color: 'var(--oms-text-primary)' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams()
   const toast = useToast()
@@ -106,6 +124,70 @@ export default function OrderDetailPage() {
                 <div>{order.address_line1}{order.address_line2 ? `, ${order.address_line2}` : ''}</div>
                 <div>{order.city}, {order.state} {order.zip}</div>
                 {order.country && order.country !== 'US' && <div>{order.country}</div>}
+              </div>
+            </div>
+          </PanelBody>
+        </Panel>
+
+        {/* Order info */}
+        <Panel>
+          <PanelHeader><PanelTitle>Order Details</PanelTitle></PanelHeader>
+          <PanelBody>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
+              <div>
+                <InfoRow label="Order Date">
+                  {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </InfoRow>
+                <InfoRow label="Platform">
+                  <PlatformBadge platform={order.platform} />
+                </InfoRow>
+                {order.external_id && (
+                  <InfoRow label="Order #">
+                    <span className="oms-order-id">#{order.external_id}</span>
+                  </InfoRow>
+                )}
+                {order.ship_by_date && (
+                  <InfoRow label="Ship By">
+                    {new Date(order.ship_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </InfoRow>
+                )}
+                {order.deliver_by_date && (
+                  <InfoRow label="Deliver By">
+                    {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </InfoRow>
+                )}
+                {order.ship_node && (
+                  <InfoRow label="Ship Node">{order.ship_node}</InfoRow>
+                )}
+              </div>
+              <div>
+                {order.items?.length > 0 && (
+                  <InfoRow label="Order Total">
+                    {(() => {
+                      const total = order.items.reduce((sum, i) => sum + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
+                      return total > 0 ? `$${total.toFixed(2)}` : '—'
+                    })()}
+                  </InfoRow>
+                )}
+                <InfoRow label="Items">{order.items?.length ?? '—'}</InfoRow>
+                {order.tracking_number && (
+                  <InfoRow label="Tracking">
+                    {trackingUrl(order.tracking_number) ? (
+                      <a href={trackingUrl(order.tracking_number)} target="_blank" rel="noopener noreferrer"
+                        className="oms-order-id"
+                        style={{ color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                        {order.tracking_number}
+                      </a>
+                    ) : (
+                      <span className="oms-order-id">{order.tracking_number}</span>
+                    )}
+                  </InfoRow>
+                )}
+                {order.notes && (
+                  <InfoRow label="Notes">
+                    <span style={{ color: 'var(--oms-text-secondary)' }}>{order.notes}</span>
+                  </InfoRow>
+                )}
               </div>
             </div>
           </PanelBody>

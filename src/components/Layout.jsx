@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useUploadContext } from '../context/UploadContext'
@@ -125,9 +126,29 @@ function UploadProgressIndicator() {
   )
 }
 
+const ChevronLeftIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </svg>
+)
+const ChevronRightIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+)
+
 export default function Layout() {
   const { user, logout, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('oms-sb') === '1'
+  )
+
+  const toggleSidebar = () => setCollapsed(c => {
+    const next = !c
+    localStorage.setItem('oms-sb', next ? '1' : '0')
+    return next
+  })
 
   const handleLogout = async () => {
     await logout()
@@ -145,10 +166,17 @@ export default function Layout() {
     <div className="oms-shell">
 
       {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-      <aside className="oms-sidebar">
+      <aside className={`oms-sidebar${collapsed ? ' oms-sb-collapsed' : ''}`}>
         <div className="oms-sb-brand">
-          <div className="oms-sb-brand-title">OMS</div>
-          <div className="oms-sb-brand-sub">Order Management</div>
+          {!collapsed && (
+            <div className="oms-sb-brand-text">
+              <div className="oms-sb-brand-title">OMS</div>
+              <div className="oms-sb-brand-sub">Order Management</div>
+            </div>
+          )}
+          <button className="oms-sb-toggle" onClick={toggleSidebar} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+            {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </button>
         </div>
 
         <nav className="oms-sb-section">
@@ -165,14 +193,14 @@ export default function Layout() {
         <div className="oms-sb-footer">
           <div className="oms-avatar">{initials}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="oms-sb-username" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div className="oms-sb-username">
               {user?.display_name || user?.email}
             </div>
             <div className="oms-sb-userrole">{user?.role}</div>
           </div>
           <button
             onClick={handleLogout}
-            style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, flexShrink: 0 }}
             onMouseEnter={e => e.target.style.color = 'rgba(255,255,255,0.7)'}
             onMouseLeave={e => e.target.style.color = 'rgba(255,255,255,0.35)'}
           >
