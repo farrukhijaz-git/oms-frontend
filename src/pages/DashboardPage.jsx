@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useDashboard, useOrders } from '../hooks/useOrders'
-import { useWalmartStatus } from '../hooks/useWalmart'
+import { useDashboard, useOrders, useImportCsv } from '../hooks/useOrders'
+import { useWalmartStatus, usePollNow } from '../hooks/useWalmart'
 import StatusBadge, { STATUS_CONFIG, STATUS_ORDER, StatusDot, PlatformBadge } from '../components/StatusBadge'
+import { showToast } from '../components/Toast'
+import NewOrderModal from '../components/NewOrderModal'
 
 function formatRelative(dt) {
   if (!dt) return '—'
@@ -14,14 +17,50 @@ function formatRelative(dt) {
   return new Date(dt).toLocaleDateString()
 }
 
+function formatNextPoll(lastPolledAt, intervalSeconds) {
+  if (!lastPolledAt || !intervalSeconds) return null
+  const next = new Date(new Date(lastPolledAt).getTime() + intervalSeconds * 1000)
+  const diffMs = next - Date.now()
+  if (diffMs <= 0) return 'due now'
+  const mins = Math.ceil(diffMs / 60000)
+  return `${mins}m`
+}
+
 export default function DashboardPage() {
   const { data, isLoading } = useDashboard()
   const { data: ordersData } = useOrders({ limit: 8 })
-  const { data: walmartStatus } = useWalmartStatus()
+  const { data: walmartStatus, refetch: refetchWalmart } = useWalmartStatus()
+  const pollMutation = usePollNow()
+  const importCsv = useImportCsv()
+  const [showNewOrder, setShowNewOrder] = useState(false)
 
   const counts = data?.counts || {}
   const activity = data?.recent_activity || []
   const recentOrders = ordersData?.orders || []
+
+  const handlePollNow = async () => {
+    try {
+      const result = await pollMutation.mutateAsync()
+      showToast(`Polled: ${result.pulled} new, ${result.updated ?? 0} updated`)
+      refetchWalmart()
+    } catch {
+      showToast('Poll failed', 'error')
+    }
+  }
+
+  const handleCsvImport = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      const result = await importCsv.mutateAsync(file)
+      showToast(`Imported ${result.imported}, skipped ${result.skipped}`)
+    } catch {
+      showToast('CSV import failed', 'error')
+    }
+    e.target.value = ''
+  }
+
+  const nextPoll = formatNextPoll(walmartStatus?.last_polled_at, walmartStatus?.poll_interval_seconds)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -29,6 +68,29 @@ export default function DashboardPage() {
       {/* Topbar */}
       <div className="topbar">
         <h1 className="text-[15px] font-semibold text-gray-900">Dashboard</h1>
+        <div className="flex items-center gap-2">
+          {walmartStatus?.configured && (
+            <>
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                <span className="text-xs text-green-700 font-medium">Walmart connected</span>
+              </div>
+              {walmartStatus.last_polled_at && (
+                <span className="text-xs text-gray-400">Last sync {formatRelative(walmartStatus.last_polled_at)}</span>
+              )}
+            </>
+          )}
+          <label className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-600 cursor-pointer hover:bg-gray-50">
+            Import CSV
+            <input type="file" accept=".csv" className="hidden" onChange={handleCsvImport} />
+          </label>
+          <button
+            onClick={() => setShowNewOrder(true)}
+            className="px-3 py-1.5 bg-navy text-white rounded-lg text-xs hover:bg-navy-hover"
+          >
+            + New Order
+          </button>
+        </div>
       </div>
 
       <div className="p-6">
@@ -36,7 +98,7 @@ export default function DashboardPage() {
           <div className="text-sm text-gray-400">Loading…</div>
         ) : (
           <>
-            {/* ── 6 Status summary cards ─────────────────────────────────── */}
+            {/* ── Status summary cards ─────────────────────────────────────── */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
               {STATUS_ORDER.map(status => {
                 const cfg = STATUS_CONFIG[status]
@@ -60,7 +122,7 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* ── 2-column layout ────────────────────────────────────────── */}
+            {/* ── 2-column layout ──────────────────────────────────────────── */}
             <div className="flex gap-5 items-start">
 
               {/* Left: Recent orders table */}
@@ -78,8 +140,9 @@ export default function DashboardPage() {
                         <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">Order ID</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Customer</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Platform</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Items</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Created</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Updated</th>
                         <th className="px-4 py-2.5" />
                       </tr>
                     </thead>
@@ -100,11 +163,12 @@ export default function DashboardPage() {
                           <td className="px-4 py-3">
                             <PlatformBadge platform={order.platform} />
                           </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{order.item_count ?? '—'}</td>
                           <td className="px-4 py-3">
                             <StatusBadge status={order.status} />
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                            {formatRelative(order.created_at)}
+                            {formatRelative(order.updated_at)}
                           </td>
                           <td className="px-4 py-3 text-right">
                             <Link
@@ -127,7 +191,7 @@ export default function DashboardPage() {
                 {/* Activity feed */}
                 <div className="card overflow-hidden">
                   <div className="px-4 py-3.5 border-b border-gray-100">
-                    <h2 className="text-sm font-semibold text-gray-900">Activity</h2>
+                    <h2 className="text-sm font-semibold text-gray-900">Recent Activity</h2>
                   </div>
                   <div className="p-4">
                     {activity.length === 0 ? (
@@ -146,9 +210,9 @@ export default function DashboardPage() {
                               </Link>
                               <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                 <StatusBadge status={item.to_status} />
-                                {item.changed_by_name && (
-                                  <span className="text-xs text-gray-400">by {item.changed_by_name}</span>
-                                )}
+                                <span className="text-xs text-gray-400">
+                                  by {item.changed_by_name || 'System'}
+                                </span>
                               </div>
                             </div>
                             <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5">
@@ -163,29 +227,60 @@ export default function DashboardPage() {
 
                 {/* Walmart sync */}
                 <div className="card overflow-hidden">
-                  <div className="px-4 py-3.5 border-b border-gray-100">
+                  <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
                     <h2 className="text-sm font-semibold text-gray-900">Walmart Sync</h2>
+                    {walmartStatus?.configured && (
+                      <button
+                        onClick={handlePollNow}
+                        disabled={pollMutation.isPending}
+                        className="px-2.5 py-1 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        {pollMutation.isPending ? 'Polling…' : 'Poll now'}
+                      </button>
+                    )}
                   </div>
                   <div className="p-4">
                     {walmartStatus ? (
-                      <div className="space-y-2.5 text-sm">
+                      <div className="space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Status</span>
                           <div className="flex items-center gap-1.5">
                             <span className={`w-2 h-2 rounded-full ${walmartStatus.configured ? 'bg-green-500' : 'bg-red-400'}`} />
                             <span className={`text-xs font-medium ${walmartStatus.configured ? 'text-green-600' : 'text-red-500'}`}>
                               {walmartStatus.configured ? 'Connected' : 'Not configured'}
                             </span>
                           </div>
+                          <span className="text-xs text-gray-400">
+                            every {walmartStatus.poll_interval_seconds / 60} min
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Last polled</span>
-                          <span className="text-xs text-gray-700">{formatRelative(walmartStatus.last_polled_at)}</span>
+                        <div className="text-xs text-gray-500">
+                          Last polled: <span className="text-gray-700">{formatRelative(walmartStatus.last_polled_at)}</span>
+                          {nextPoll && (
+                            <> · Next: <span className="text-gray-700">{nextPoll}</span></>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">Interval</span>
-                          <span className="text-xs text-gray-700">{walmartStatus.poll_interval_seconds / 60} min</span>
-                        </div>
+                        {walmartStatus.last_sync && (
+                          <div className="grid grid-cols-2 gap-2 pt-1">
+                            <div className="bg-gray-50 rounded-lg p-2.5">
+                              <div className="text-lg font-bold text-gray-900 leading-none">
+                                {walmartStatus.last_sync.orders_pulled ?? 0}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">Last pull</div>
+                            </div>
+                            <div className="bg-gray-50 rounded-lg p-2.5">
+                              <div className="text-lg font-bold text-gray-900 leading-none">
+                                {walmartStatus.last_sync.status === 'success' ? (
+                                  <span className="text-green-600">✓</span>
+                                ) : (
+                                  <span className="text-red-500">!</span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {walmartStatus.last_sync.status}
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm text-gray-400">Not available</p>
@@ -198,6 +293,8 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {showNewOrder && <NewOrderModal onClose={() => setShowNewOrder(false)} />}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWalmartStatus, useWalmartLog, usePollNow, useSaveCredentials, useUpdateSettings } from '../hooks/useWalmart'
+import { useWalmartStatus, useWalmartLog, usePollNow, useSaveCredentials, useUpdateSettings, useBackfill } from '../hooks/useWalmart'
 import { showToast } from '../components/Toast'
 
 const INTERVALS = [
@@ -29,10 +29,12 @@ export default function AdminWalmartPage() {
   const pollMutation = usePollNow()
   const credsMutation = useSaveCredentials()
   const settingsMutation = useUpdateSettings()
+  const backfillMutation = useBackfill()
 
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [interval, setInterval] = useState(900)
+  const [backfillDate, setBackfillDate] = useState('')
 
   const log = logData?.log || []
 
@@ -60,9 +62,19 @@ export default function AdminWalmartPage() {
   const handlePollNow = async () => {
     try {
       const result = await pollMutation.mutateAsync()
-      showToast(`Polled: ${result.pulled} new, ${result.skipped} skipped`)
+      showToast(`Polled: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
     } catch (err) {
       showToast(err.response?.data?.error?.message || 'Poll failed', 'error')
+    }
+  }
+
+  const handleBackfill = async (e) => {
+    e.preventDefault()
+    try {
+      const result = await backfillMutation.mutateAsync(backfillDate)
+      showToast(`Backfill done: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || 'Backfill failed', 'error')
     }
   }
 
@@ -145,6 +157,22 @@ export default function AdminWalmartPage() {
               Save
             </button>
           </div>
+        </div>
+
+        {/* Backfill */}
+        <div className="card p-5">
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Import Historical Orders</h2>
+          <p className="text-xs text-gray-400 mb-3">Pull all Walmart orders from a specific date. Safe to re-run — duplicates are skipped.</p>
+          <form onSubmit={handleBackfill} className="flex items-center gap-3">
+            <input
+              type="date" required value={backfillDate} onChange={e => setBackfillDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button type="submit" disabled={backfillMutation.isPending || !status?.configured}
+              className="px-4 py-2 bg-navy text-white text-sm rounded-lg hover:bg-navy-hover disabled:opacity-50">
+              {backfillMutation.isPending ? 'Importing…' : 'Import from date'}
+            </button>
+          </form>
         </div>
 
         {/* Sync log */}

@@ -26,6 +26,17 @@ export function usePollNow() {
   })
 }
 
+export function useBackfill() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (from_date) => api.post('/walmart/sync/backfill', { from_date }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['walmart'] })
+      qc.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+}
+
 export function useSaveCredentials() {
   return useMutation({
     mutationFn: (data) => api.post('/walmart/credentials', data).then(r => r.data),
