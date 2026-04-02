@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useDashboard, useOrders } from '../hooks/useOrders'
 import { useWalmartStatus } from '../hooks/useWalmart'
-import StatusBadge, { STATUS_CONFIG, STATUS_ORDER, StatusDot } from '../components/StatusBadge'
+import StatusBadge, { STATUS_CONFIG, STATUS_ORDER, StatusDot, PlatformBadge } from '../components/StatusBadge'
 
 function formatRelative(dt) {
   if (!dt) return '—'
@@ -75,34 +75,45 @@ export default function DashboardPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">Customer</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Order ID</th>
+                        <th className="text-left px-5 py-2.5 text-xs font-medium text-gray-500">Order ID</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Customer</th>
                         <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Status</th>
-                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Updated</th>
+                        <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500">Created</th>
+                        <th className="px-4 py-2.5" />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {recentOrders.map(order => (
                         <tr key={order.id} className="hover:bg-gray-50/60">
                           <td className="px-5 py-3">
-                            <Link
-                              to={`/orders/${order.id}`}
-                              className="font-medium text-gray-900 hover:text-blue-600 text-sm block"
-                            >
-                              {order.customer_name}
-                            </Link>
-                            <span className="text-xs text-gray-400">{order.city}, {order.state}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="font-mono text-xs text-gray-500">
+                            <span className="font-mono text-xs text-gray-700 font-medium">
                               {order.external_id ? `#${order.external_id}` : order.id.slice(0, 8)}
                             </span>
+                            {order.platform && (
+                              <div className="mt-0.5">
+                                <PlatformBadge platform={order.platform} />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-medium text-gray-900 text-sm block">{order.customer_name}</span>
+                            {(order.city || order.state) && (
+                              <span className="text-xs text-gray-400">{[order.city, order.state].filter(Boolean).join(', ')}</span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <StatusBadge status={order.status} />
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                            {formatRelative(order.updated_at)}
+                            {formatRelative(order.created_at)}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Link
+                              to={`/orders/${order.id}`}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              View
+                            </Link>
                           </td>
                         </tr>
                       ))}
