@@ -213,7 +213,7 @@ export default function AdminWalmartPage() {
                       <td className="oms-text-secondary" style={{ fontSize: 12 }}>{entry.sync_type}</td>
                       <td><SyncStatusBadge status={entry.status} /></td>
                       <td className="oms-text-secondary">{entry.orders_pulled}</td>
-                      <td style={{ fontSize: 11, color: '#DC2626', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontSize: 11, color: '#DC2626', wordBreak: 'break-word' }}>
                         {entry.error_message || '—'}
                       </td>
                     </tr>
