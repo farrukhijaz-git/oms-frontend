@@ -157,7 +157,7 @@ export default function OrdersPage() {
             <EmptyState title="No orders found" sub="Try adjusting your filters or create a new order." />
           ) : (
             <div style={{ overflowX: 'auto' }}>
-            <table className="oms-table" style={{ minWidth: 700 }}>
+            <table className="oms-table" style={{ minWidth: 900 }}>
               <thead>
                 <tr>
                   <th>Order ID</th>
@@ -166,6 +166,8 @@ export default function OrdersPage() {
                   <th>Items</th>
                   <th>Status</th>
                   <th>Order Date</th>
+                  <th>Ship By</th>
+                  <th>Ship Node</th>
                   <th>Tracking</th>
                   <th>Actions</th>
                 </tr>
@@ -195,7 +197,16 @@ export default function OrdersPage() {
                       </button>
                     </td>
                     <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </td>
+                    <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {order.ship_by_date
+                        ? new Date(order.ship_by_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : <span className="oms-text-muted">—</span>
+                      }
+                    </td>
+                    <td className="oms-text-secondary" style={{ fontSize: 12 }}>
+                      {order.ship_node || <span className="oms-text-muted">—</span>}
                     </td>
                     <td style={{ fontSize: 12 }}>
                       {order.tracking_number

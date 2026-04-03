@@ -94,7 +94,7 @@ export default function AdminWalmartPage() {
         </BtnPrimary>
       </Topbar>
 
-      <div className="oms-content" style={{ maxWidth: 680 }}>
+      <div className="oms-content">
 
         {/* Connection status */}
         <Panel>

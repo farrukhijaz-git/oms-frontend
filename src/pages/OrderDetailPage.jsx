@@ -99,224 +99,232 @@ export default function OrderDetailPage() {
         <BtnPrimary size="sm" onClick={() => setShowStatusModal(true)}>Update Status</BtnPrimary>
       </Topbar>
 
-      <div className="oms-content" style={{ maxWidth: 900 }}>
+      <div className="oms-content">
 
-        {/* Customer info */}
-        <Panel>
-          <PanelHeader>
-            <PanelTitle>Customer &amp; Address</PanelTitle>
-          </PanelHeader>
-          <PanelBody>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--oms-text-primary)' }}>{order.customer_name}</div>
-                {order.external_id && (
-                  <div className="oms-order-id" style={{ marginTop: 4 }}>Order #{order.external_id}</div>
-                )}
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', lineHeight: 1.6 }}>
-                <div>{order.address_line1}{order.address_line2 ? `, ${order.address_line2}` : ''}</div>
-                <div>{order.city}, {order.state} {order.zip}</div>
-                {order.country && order.country !== 'US' && <div>{order.country}</div>}
-              </div>
-            </div>
-          </PanelBody>
-        </Panel>
-
-        {/* Order info */}
-        <Panel>
-          <PanelHeader><PanelTitle>Order Details</PanelTitle></PanelHeader>
-          <PanelBody>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '20px 24px' }}>
-
-              <div>
-                <div style={STAT_LABEL}>Order Date</div>
-                <div style={STAT_VALUE}>
-                  {order.order_date 
-                    ? new Date(order.order_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                    : new Date(order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-                  }
-                </div>
-              </div>
-
-              {(() => {
-                // Use marketplace-provided total if available, otherwise calculate from items
-                const total = order.order_total || 
-                  (order.items?.length > 0 
-                    ? order.items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
-                    : 0);
-                return total > 0 ? (
-                  <div>
-                    <div style={STAT_LABEL}>Order Total</div>
-                    <div style={STAT_VALUE}>${parseFloat(total).toFixed(2)}</div>
-                  </div>
-                ) : null
-              })()}
-
-              <div>
-                <div style={STAT_LABEL}>Platform</div>
-                <div style={{ marginTop: 2 }}><PlatformBadge platform={order.platform} /></div>
-              </div>
-
-              <div>
-                <div style={STAT_LABEL}>Items</div>
-                <div style={STAT_VALUE}>{order.items?.length ?? '—'}</div>
-              </div>
-
-              {order.ship_by_date && (
-                <div>
-                  <div style={STAT_LABEL}>Ship By</div>
-                  <div style={STAT_VALUE}>
-                    {new Date(order.ship_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              )}
-
-              {order.deliver_by_date && (
-                <div>
-                  <div style={STAT_LABEL}>Deliver By</div>
-                  <div style={STAT_VALUE}>
-                    {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </div>
-                </div>
-              )}
-
-              {order.ship_node && (
-                <div>
-                  <div style={STAT_LABEL}>Ship Node</div>
-                  <div style={STAT_VALUE}>{order.ship_node}</div>
-                </div>
-              )}
-
-              {order.tracking_number && (
-                <div style={{ gridColumn: 'span 2' }}>
-                  <div style={STAT_LABEL}>Tracking Number</div>
-                  <div style={{ marginTop: 2 }}>
-                    {trackingUrl(order.tracking_number) ? (
-                      <a href={trackingUrl(order.tracking_number)} target="_blank" rel="noopener noreferrer"
-                        className="oms-order-id"
-                        style={{ fontSize: 13, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
-                        {order.tracking_number}
-                      </a>
-                    ) : (
-                      <span className="oms-order-id" style={{ fontSize: 13 }}>{order.tracking_number}</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {order.notes && (
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <div style={STAT_LABEL}>Notes</div>
-                  <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', marginTop: 2 }}>{order.notes}</div>
-                </div>
-              )}
-
-            </div>
-          </PanelBody>
-        </Panel>
-
-        {/* Status stepper */}
+        {/* Status stepper — full width */}
         <Panel>
           <StatusStepper currentStatus={order.status} />
         </Panel>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        {/* Two-column layout: left=details, right=label+history */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 14, alignItems: 'start' }}>
 
-          {/* Items */}
-          <Panel>
-            <PanelHeader><PanelTitle>Items</PanelTitle></PanelHeader>
-            {order.items?.length ? (
-              <table className="oms-table">
-                <thead>
-                  <tr>
-                    <th>Item</th>
-                    <th style={{ width: 48 }}>Qty</th>
-                    <th style={{ width: 64 }}>Price</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {order.items.map(item => (
-                    <tr key={item.id}>
-                      <td>
-                        {item.name}
-                        {item.sku && <span className="oms-order-id" style={{ marginLeft: 4 }}>({item.sku})</span>}
-                      </td>
-                      <td className="oms-text-secondary">{item.quantity}</td>
-                      <td className="oms-text-secondary">{item.unit_price ? `$${item.unit_price}` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
+          {/* Left column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Customer & Address */}
+            <Panel>
+              <PanelHeader>
+                <PanelTitle>Customer &amp; Address</PanelTitle>
+              </PanelHeader>
               <PanelBody>
-                <span className="oms-text-muted" style={{ fontSize: 13 }}>No items</span>
-              </PanelBody>
-            )}
-          </Panel>
-
-          {/* Shipping label */}
-          <Panel>
-            <PanelHeader><PanelTitle>Shipping Label</PanelTitle></PanelHeader>
-            <PanelBody>
-              {order.label_id ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--oms-label-text)', display: 'inline-block' }} />
-                    <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-label-text)' }}>Label attached</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--oms-text-primary)' }}>{order.customer_name}</div>
+                    {order.external_id && (
+                      <div className="oms-order-id" style={{ marginTop: 4 }}>Order #{order.external_id}</div>
+                    )}
                   </div>
-                  {order.tracking_number && (
-                    <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)' }}>
-                      Tracking: <span className="oms-order-id">{order.tracking_number}</span>
+                  <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', lineHeight: 1.6 }}>
+                    <div>{order.address_line1}{order.address_line2 ? `, ${order.address_line2}` : ''}</div>
+                    <div>{order.city}, {order.state} {order.zip}</div>
+                    {order.country && order.country !== 'US' && <div>{order.country}</div>}
+                  </div>
+                </div>
+              </PanelBody>
+            </Panel>
+
+            {/* Order Details */}
+            <Panel>
+              <PanelHeader><PanelTitle>Order Details</PanelTitle></PanelHeader>
+              <PanelBody>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '16px 20px' }}>
+
+                  <div>
+                    <div style={STAT_LABEL}>Order Date</div>
+                    <div style={STAT_VALUE}>
+                      {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const total = order.order_total ||
+                      (order.items?.length > 0
+                        ? order.items.reduce((s, i) => s + (parseFloat(i.unit_price) || 0) * (i.quantity || 1), 0)
+                        : 0);
+                    return total > 0 ? (
+                      <div>
+                        <div style={STAT_LABEL}>Order Total</div>
+                        <div style={STAT_VALUE}>${parseFloat(total).toFixed(2)}</div>
+                      </div>
+                    ) : null
+                  })()}
+
+                  <div>
+                    <div style={STAT_LABEL}>Platform</div>
+                    <div style={{ marginTop: 2 }}><PlatformBadge platform={order.platform} /></div>
+                  </div>
+
+                  <div>
+                    <div style={STAT_LABEL}>Items</div>
+                    <div style={STAT_VALUE}>{order.items?.length ?? '—'}</div>
+                  </div>
+
+                  {order.ship_by_date && (
+                    <div>
+                      <div style={STAT_LABEL}>Ship By</div>
+                      <div style={STAT_VALUE}>
+                        {new Date(order.ship_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
                   )}
-                  <div style={{ marginTop: 4 }}>
-                    <BtnSecondary size="sm" onClick={handleDownloadLabel}>Download Label</BtnSecondary>
+
+                  {order.deliver_by_date && (
+                    <div>
+                      <div style={STAT_LABEL}>Deliver By</div>
+                      <div style={STAT_VALUE}>
+                        {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                  )}
+
+                  {order.ship_node && (
+                    <div>
+                      <div style={STAT_LABEL}>Ship Node</div>
+                      <div style={STAT_VALUE}>{order.ship_node}</div>
+                    </div>
+                  )}
+
+                  {order.tracking_number && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div style={STAT_LABEL}>Tracking Number</div>
+                      <div style={{ marginTop: 2 }}>
+                        {trackingUrl(order.tracking_number) ? (
+                          <a href={trackingUrl(order.tracking_number)} target="_blank" rel="noopener noreferrer"
+                            className="oms-order-id"
+                            style={{ fontSize: 13, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+                            {order.tracking_number}
+                          </a>
+                        ) : (
+                          <span className="oms-order-id" style={{ fontSize: 13 }}>{order.tracking_number}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {order.notes && (
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <div style={STAT_LABEL}>Notes</div>
+                      <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', marginTop: 2 }}>{order.notes}</div>
+                    </div>
+                  )}
+
+                </div>
+              </PanelBody>
+            </Panel>
+
+            {/* Items table */}
+            <Panel>
+              <PanelHeader><PanelTitle>Items</PanelTitle></PanelHeader>
+              {order.items?.length ? (
+                <table className="oms-table">
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th style={{ width: 48 }}>Qty</th>
+                      <th style={{ width: 64 }}>Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {order.items.map(item => (
+                      <tr key={item.id}>
+                        <td>
+                          {item.name}
+                          {item.sku && <span className="oms-order-id" style={{ marginLeft: 4 }}>({item.sku})</span>}
+                        </td>
+                        <td className="oms-text-secondary">{item.quantity}</td>
+                        <td className="oms-text-secondary">{item.unit_price ? `$${item.unit_price}` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <PanelBody>
+                  <span className="oms-text-muted" style={{ fontSize: 13 }}>No items</span>
+                </PanelBody>
+              )}
+            </Panel>
+
+          </div>{/* end left column */}
+
+          {/* Right column */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Shipping label */}
+            <Panel>
+              <PanelHeader><PanelTitle>Shipping Label</PanelTitle></PanelHeader>
+              <PanelBody>
+                {order.label_id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--oms-label-text)', display: 'inline-block' }} />
+                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-label-text)' }}>Label attached</span>
+                    </div>
+                    {order.tracking_number && (
+                      <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)' }}>
+                        Tracking: <span className="oms-order-id">{order.tracking_number}</span>
+                      </div>
+                    )}
+                    <div style={{ marginTop: 4 }}>
+                      <BtnSecondary size="sm" onClick={handleDownloadLabel}>Download Label</BtnSecondary>
+                    </div>
                   </div>
+                ) : (
+                  <span className="oms-text-muted" style={{ fontSize: 13 }}>No label attached</span>
+                )}
+              </PanelBody>
+            </Panel>
+
+            {/* Status history */}
+            <Panel>
+              <PanelHeader><PanelTitle>Status History</PanelTitle></PanelHeader>
+              {order.status_log?.length ? (
+                <div style={{ padding: '8px 18px 16px' }}>
+                  {order.status_log.map((entry, i) => (
+                    <div key={entry.id} style={{ display: 'flex', gap: 12 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
+                        <StatusDot status={entry.to_status} />
+                        {i < order.status_log.length - 1 && (
+                          <div style={{ width: 1, flex: 1, background: 'var(--oms-border)', margin: '4px 0' }} />
+                        )}
+                      </div>
+                      <div style={{ paddingBottom: 16, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <StatusBadge status={entry.to_status} />
+                          {entry.changed_by_name && (
+                            <span className="oms-text-muted" style={{ fontSize: 12 }}>by {entry.changed_by_name}</span>
+                          )}
+                          <span className="oms-text-muted" style={{ fontSize: 11 }}>
+                            {new Date(entry.changed_at).toLocaleString()}
+                          </span>
+                        </div>
+                        {entry.note && (
+                          <div style={{ fontSize: 12, color: 'var(--oms-text-secondary)', marginTop: 4 }}>{entry.note}</div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <span className="oms-text-muted" style={{ fontSize: 13 }}>No label attached</span>
+                <PanelBody>
+                  <span className="oms-text-muted" style={{ fontSize: 13 }}>No history</span>
+                </PanelBody>
               )}
-            </PanelBody>
-          </Panel>
-        </div>
+            </Panel>
 
-        {/* Status history */}
-        <Panel>
-          <PanelHeader><PanelTitle>Status History</PanelTitle></PanelHeader>
-          {order.status_log?.length ? (
-            <div style={{ padding: '8px 18px 16px' }}>
-              {order.status_log.map((entry, i) => (
-                <div key={entry.id} style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
-                    <StatusDot status={entry.to_status} />
-                    {i < order.status_log.length - 1 && (
-                      <div style={{ width: 1, flex: 1, background: 'var(--oms-border)', margin: '4px 0' }} />
-                    )}
-                  </div>
-                  <div style={{ paddingBottom: 16, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <StatusBadge status={entry.to_status} />
-                      {entry.changed_by_name && (
-                        <span className="oms-text-muted" style={{ fontSize: 12 }}>by {entry.changed_by_name}</span>
-                      )}
-                      <span className="oms-text-muted" style={{ fontSize: 11 }}>
-                        {new Date(entry.changed_at).toLocaleString()}
-                      </span>
-                    </div>
-                    {entry.note && (
-                      <div style={{ fontSize: 12, color: 'var(--oms-text-secondary)', marginTop: 4 }}>{entry.note}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <PanelBody>
-              <span className="oms-text-muted" style={{ fontSize: 13 }}>No history</span>
-            </PanelBody>
-          )}
-        </Panel>
+          </div>{/* end right column */}
+
+        </div>{/* end two-column grid */}
 
       </div>
 
