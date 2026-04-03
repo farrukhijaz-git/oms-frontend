@@ -277,10 +277,10 @@ export function Tabs({ tabs, active, onChange }) {
 }
 
 // ── StatusStepper ─────────────────────────────────────────────
-const STATUSES = ['new','label_generated','inventory_ordered','packed','ready','shipped']
+const STATUSES = ['new','label_generated','inventory_ordered','packed','ready','shipped','delivered']
 const STEP_LABELS = {
   new: 'New', label_generated: 'Label', inventory_ordered: 'Inventory',
-  packed: 'Packed', ready: 'Ready', shipped: 'Shipped'
+  packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered'
 }
 export function StatusStepper({ currentStatus }) {
   const currentIdx = STATUSES.indexOf(currentStatus)
