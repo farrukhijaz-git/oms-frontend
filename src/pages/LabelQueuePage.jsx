@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
 import { useUploadContext } from '../context/UploadContext'
@@ -60,11 +61,30 @@ function PreviewButton({ labelId }) {
 }
 
 // ── OrderHoverCard ────────────────────────────────────────────────────────────
+// Uses a fixed-position portal so the card is never clipped by overflow:auto
+// containers (e.g. the horizontal-scroll table wrapper).
 function OrderHoverCard({ label, children }) {
   const [visible, setVisible] = useState(false)
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
+  const triggerRef = useRef(null)
   const timerRef = useRef(null)
 
-  const show = () => { clearTimeout(timerRef.current); setVisible(true) }
+  const CARD_HEIGHT = 190 // approximate max height for flip logic
+  const CARD_WIDTH  = 232
+
+  const show = () => {
+    clearTimeout(timerRef.current)
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const top = spaceBelow >= CARD_HEIGHT + 10
+        ? rect.bottom + 6
+        : rect.top - CARD_HEIGHT - 6
+      const left = Math.min(rect.left, window.innerWidth - CARD_WIDTH - 8)
+      setCoords({ top: Math.max(4, top), left: Math.max(4, left) })
+    }
+    setVisible(true)
+  }
   const hide = () => { timerRef.current = setTimeout(() => setVisible(false), 120) }
 
   const hasAddress = label.matched_address_line1 || label.matched_city
@@ -75,41 +95,46 @@ function OrderHoverCard({ label, children }) {
     label.matched_zip,
   ].filter(Boolean)
 
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }} onMouseEnter={show} onMouseLeave={hide}>
-      {children}
-      {visible && (
-        <div
-          style={{
-            position: 'absolute', zIndex: 50, left: 0, top: '100%', marginTop: 6,
-            background: '#fff', border: '1px solid var(--oms-border)', borderRadius: 10,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', padding: 12, width: 224, fontSize: 12,
-          }}
-          onMouseEnter={show}
-          onMouseLeave={hide}
-        >
-          <div style={{ fontWeight: 600, color: 'var(--oms-text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-            {label.matched_customer_name}
-            {label.matched_order_status && <StatusBadge status={label.matched_order_status} />}
-          </div>
-          {label.matched_order_external_id && (
-            <div className="oms-order-id" style={{ fontSize: 11, marginBottom: 6 }}>
-              #{label.matched_order_external_id}
-            </div>
-          )}
-          {hasAddress && (
-            <div className="oms-text-muted" style={{ lineHeight: 1.7 }}>
-              {addressParts.map((p, i) => <div key={i}>{p}</div>)}
-            </div>
-          )}
-          {label.order_tracking_number && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--oms-border)' }} className="oms-order-id">
-              <span style={{ fontFamily: 'inherit', fontWeight: 500, fontSize: 11 }}>Tracking: </span>
-              {label.order_tracking_number}
-            </div>
-          )}
+  const card = visible ? createPortal(
+    <div
+      style={{
+        position: 'fixed', zIndex: 9999,
+        top: coords.top, left: coords.left,
+        background: '#fff', border: '1px solid var(--oms-border)', borderRadius: 10,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.14)', padding: 12,
+        width: CARD_WIDTH, fontSize: 12, pointerEvents: 'auto',
+      }}
+      onMouseEnter={() => clearTimeout(timerRef.current)}
+      onMouseLeave={hide}
+    >
+      <div style={{ fontWeight: 600, color: 'var(--oms-text-primary)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+        {label.matched_customer_name}
+        {label.matched_order_status && <StatusBadge status={label.matched_order_status} />}
+      </div>
+      {label.matched_order_external_id && (
+        <div className="oms-order-id" style={{ fontSize: 11, marginBottom: 6 }}>
+          #{label.matched_order_external_id}
         </div>
       )}
+      {hasAddress && (
+        <div className="oms-text-muted" style={{ lineHeight: 1.7 }}>
+          {addressParts.map((p, i) => <div key={i}>{p}</div>)}
+        </div>
+      )}
+      {label.order_tracking_number && (
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--oms-border)' }} className="oms-order-id">
+          <span style={{ fontFamily: 'inherit', fontWeight: 500, fontSize: 11 }}>Tracking: </span>
+          {label.order_tracking_number}
+        </div>
+      )}
+    </div>,
+    document.body
+  ) : null
+
+  return (
+    <div ref={triggerRef} style={{ display: 'inline-block' }} onMouseEnter={show} onMouseLeave={hide}>
+      {children}
+      {card}
     </div>
   )
 }
