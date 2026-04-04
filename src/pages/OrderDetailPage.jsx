@@ -52,6 +52,86 @@ function FieldSm({ label, children }) {
   )
 }
 
+function TrackingLink({ tn, tUrl, style }) {
+  if (!tn) return <span className="oms-text-muted">—</span>
+  const url = tUrl || trackingLink(tn)
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        className="oms-order-id"
+        style={{ fontSize: 12, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted', ...style }}>
+        {tn}
+      </a>
+    )
+  }
+  return <span className="oms-order-id" style={{ fontSize: 12, ...style }}>{tn}</span>
+}
+
+function ItemCard({ item }) {
+  const tn = item.line_tracking_number
+  const tUrl = item.tracking_url || trackingLink(tn)
+  const lineTotal = (parseFloat(item.unit_price) || 0) * (item.quantity || 1)
+
+  return (
+    <div style={{
+      display: 'flex', gap: 14, padding: '14px 0',
+      borderBottom: '1px solid var(--oms-border)', minWidth: 0,
+    }}>
+      {/* Image placeholder */}
+      <div style={{
+        width: 64, height: 64, flexShrink: 0,
+        background: '#f0f2f5', borderRadius: 8, border: '1px solid var(--oms-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c0c8d4" strokeWidth="1.5">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <path d="M21 15l-5-5L5 21" />
+        </svg>
+      </div>
+
+      {/* Middle: name, variant, sku, condition */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'center' }}>
+        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--oms-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {item.name || '—'}
+        </div>
+        {item.variant && (
+          <div style={{ fontSize: 12, color: 'var(--oms-text-secondary)' }}>{item.variant}</div>
+        )}
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {item.sku && (
+            <span className="oms-order-id" style={{ fontSize: 11, background: '#f0f2f5', padding: '2px 6px', borderRadius: 4 }}>
+              {item.sku}
+            </span>
+          )}
+          {item.condition && (
+            <span style={{ fontSize: 11, color: 'var(--oms-text-muted)', background: '#f0f2f5', padding: '2px 6px', borderRadius: 4 }}>
+              {item.condition}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Right: price, qty, status, tracking, ship date */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5, flexShrink: 0, justifyContent: 'center' }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--oms-text-primary)' }}>
+          {lineTotal > 0
+            ? `$${lineTotal.toFixed(2)}`
+            : item.unit_price ? `$${parseFloat(item.unit_price).toFixed(2)}` : '—'}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--oms-text-secondary)' }}>Qty: {item.quantity}</div>
+        {item.line_status && <WalmartStatusBadge status={item.line_status} />}
+        {tn && <TrackingLink tn={tn} tUrl={tUrl} />}
+        {item.ship_datetime && (
+          <div style={{ fontSize: 11, color: 'var(--oms-text-muted)', whiteSpace: 'nowrap' }}>
+            {new Date(item.ship_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams()
   const toast = useToast()
@@ -138,16 +218,16 @@ export default function OrderDetailPage() {
         </Panel>
 
         {/* Two-column layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 14, alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 14, alignItems: 'start', minWidth: 0 }}>
 
-          {/* Left column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* ── Left column ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
             {/* Order Summary */}
             <Panel>
               <PanelHeader><PanelTitle>Order Summary</PanelTitle></PanelHeader>
               <PanelBody>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '14px 20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '14px 20px' }}>
                   <Field label="Purchase Order #">
                     {order.external_id
                       ? <span className="oms-order-id">#{order.external_id}</span>
@@ -199,32 +279,30 @@ export default function OrderDetailPage() {
             <Panel>
               <PanelHeader><PanelTitle>Customer &amp; Shipping</PanelTitle></PanelHeader>
               <PanelBody>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px' }}>
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--oms-text-primary)' }}>{order.customer_name}</div>
-                    <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', marginTop: 6, lineHeight: 1.7 }}>
-                      <div>{order.address_line1}{order.address_line2 ? `, ${order.address_line2}` : ''}</div>
-                      <div>{order.city}, {order.state} {order.zip}</div>
-                      {order.country && order.country !== 'US' && <div>{order.country}</div>}
-                    </div>
+                {/* Name + address block */}
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--oms-text-primary)' }}>{order.customer_name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)', marginTop: 6, lineHeight: 1.7 }}>
+                    <div>{order.address_line1}{order.address_line2 ? `, ${order.address_line2}` : ''}</div>
+                    <div>{order.city}, {order.state} {order.zip}</div>
+                    {order.country && order.country !== 'US' && <div>{order.country}</div>}
                   </div>
+                </div>
+
+                {/* 3-column meta grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 20px', minWidth: 0 }}>
                   {order.customer_email && (
-                    <FieldSm label="Email">{order.customer_email}</FieldSm>
-                  )}
-                  {order.phone && (
-                    <FieldSm label="Phone">{order.phone}</FieldSm>
+                    <FieldSm label="Email">
+                      <span style={{ wordBreak: 'break-all' }}>{order.customer_email}</span>
+                    </FieldSm>
                   )}
                   {order.address_type && (
                     <FieldSm label="Address Type">{order.address_type}</FieldSm>
                   )}
-                  {order.shipping_method && (
-                    <FieldSm label="Shipping Method">{order.shipping_method}</FieldSm>
-                  )}
-                  {order.carrier_method && (
-                    <FieldSm label="Carrier">{order.carrier_method}</FieldSm>
-                  )}
-                  {order.ship_method && (
-                    <FieldSm label="Ship Method">{order.ship_method}</FieldSm>
+                  {(order.shipping_method || order.ship_method || order.carrier_method) && (
+                    <FieldSm label="Shipping Method">
+                      {order.shipping_method || order.ship_method || order.carrier_method}
+                    </FieldSm>
                   )}
                   {order.ship_by_date && (
                     <FieldSm label="Ship By">
@@ -236,125 +314,33 @@ export default function OrderDetailPage() {
                       {new Date(order.deliver_by_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </FieldSm>
                   )}
-                  {order.tracking_number && (
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <div style={LBL}>Tracking Number</div>
-                      <div style={{ marginTop: 3 }}>
-                        {trackingLink(order.tracking_number) ? (
-                          <a href={trackingLink(order.tracking_number)} target="_blank" rel="noopener noreferrer"
-                            className="oms-order-id"
-                            style={{ fontSize: 13, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
-                            {order.tracking_number}
-                          </a>
-                        ) : (
-                          <span className="oms-order-id" style={{ fontSize: 13 }}>{order.tracking_number}</span>
-                        )}
-                      </div>
-                    </div>
+                  {order.ship_node && (
+                    <FieldSm label="Ship Node">{order.ship_node}</FieldSm>
                   )}
                 </div>
+
+                {/* Tracking number — full-width row */}
+                {order.tracking_number && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--oms-border)' }}>
+                    <div style={LBL}>Tracking Number</div>
+                    <div style={{ marginTop: 4 }}>
+                      <TrackingLink tn={order.tracking_number} style={{ fontSize: 13 }} />
+                    </div>
+                  </div>
+                )}
               </PanelBody>
             </Panel>
-
-            {/* Fulfillment / Ship Node */}
-            {(order.ship_node || order.ship_node_id) && (
-              <Panel>
-                <PanelHeader><PanelTitle>Fulfillment / Ship Node</PanelTitle></PanelHeader>
-                <PanelBody>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '14px 24px' }}>
-                    {order.ship_node && (
-                      <FieldSm label="Ship Node Name">{order.ship_node}</FieldSm>
-                    )}
-                    {order.ship_node_id && (
-                      <FieldSm label="Ship Node ID">
-                        <span className="oms-order-id" style={{ fontSize: 12 }}>{order.ship_node_id}</span>
-                      </FieldSm>
-                    )}
-                  </div>
-                </PanelBody>
-              </Panel>
-            )}
 
             {/* Order Lines */}
             <Panel>
               <PanelHeader><PanelTitle>Order Lines</PanelTitle></PanelHeader>
               {order.items?.length ? (
-                <div style={{ overflowX: 'auto' }}>
-                  <table className="oms-table" style={{ minWidth: 700 }}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: 32 }}>#</th>
-                        <th>Product</th>
-                        <th>SKU</th>
-                        <th>Condition</th>
-                        <th style={{ textAlign: 'right' }}>Qty</th>
-                        <th style={{ textAlign: 'right' }}>Unit Price</th>
-                        <th style={{ textAlign: 'right' }}>Tax</th>
-                        <th style={{ textAlign: 'right' }}>Total</th>
-                        <th>Status</th>
-                        <th>Tracking</th>
-                        <th>Ship Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {order.items.map(item => {
-                        const lineTotal = (parseFloat(item.unit_price) || 0) * (item.quantity || 1)
-                        const tn = item.line_tracking_number
-                        const tUrl = item.tracking_url || trackingLink(tn)
-                        return (
-                          <tr key={item.id}>
-                            <td className="oms-text-muted" style={{ fontSize: 12 }}>{item.line_number || '—'}</td>
-                            <td style={{ fontSize: 13, fontWeight: 500 }}>
-                              {item.name}
-                            </td>
-                            <td>
-                              {item.sku
-                                ? <span className="oms-order-id" style={{ fontSize: 11 }}>{item.sku}</span>
-                                : <span className="oms-text-muted">—</span>}
-                            </td>
-                            <td className="oms-text-secondary" style={{ fontSize: 12 }}>
-                              {item.condition || <span className="oms-text-muted">—</span>}
-                            </td>
-                            <td className="oms-text-secondary" style={{ textAlign: 'right' }}>{item.quantity}</td>
-                            <td className="oms-text-secondary" style={{ textAlign: 'right' }}>
-                              {item.unit_price ? `$${parseFloat(item.unit_price).toFixed(2)}` : '—'}
-                            </td>
-                            <td className="oms-text-secondary" style={{ textAlign: 'right', fontSize: 12 }}>
-                              {item.tax_amount ? `$${parseFloat(item.tax_amount).toFixed(2)}` : '—'}
-                            </td>
-                            <td style={{ textAlign: 'right', fontWeight: 500, fontSize: 13 }}>
-                              {lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : '—'}
-                            </td>
-                            <td>
-                              {item.line_status
-                                ? <WalmartStatusBadge status={item.line_status} />
-                                : <span className="oms-text-muted">—</span>}
-                            </td>
-                            <td style={{ fontSize: 11 }}>
-                              {tn ? (
-                                tUrl ? (
-                                  <a href={tUrl} target="_blank" rel="noopener noreferrer"
-                                    className="oms-order-id"
-                                    style={{ fontSize: 11, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
-                                    {tn}
-                                  </a>
-                                ) : (
-                                  <span className="oms-order-id" style={{ fontSize: 11 }}>{tn}</span>
-                                )
-                              ) : (
-                                <span className="oms-text-muted">—</span>
-                              )}
-                            </td>
-                            <td className="oms-text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                              {item.ship_datetime
-                                ? new Date(item.ship_datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : <span>—</span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                <div style={{ padding: '0 18px 4px' }}>
+                  {order.items.map((item, idx) => (
+                    <div key={item.id} style={idx === order.items.length - 1 ? { borderBottom: 'none' } : {}}>
+                      <ItemCard item={item} />
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <PanelBody>
@@ -365,8 +351,8 @@ export default function OrderDetailPage() {
 
           </div>{/* end left column */}
 
-          {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* ── Right column ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
             {/* Shipping label */}
             <Panel>
@@ -416,7 +402,7 @@ export default function OrderDetailPage() {
                           <div style={{ width: 1, flex: 1, background: 'var(--oms-border)', margin: '4px 0' }} />
                         )}
                       </div>
-                      <div style={{ paddingBottom: 16, flex: 1 }}>
+                      <div style={{ paddingBottom: 16, flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <StatusBadge status={entry.to_status} />
                           {entry.changed_by_name && (
