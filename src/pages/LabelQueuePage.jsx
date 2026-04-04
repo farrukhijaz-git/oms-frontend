@@ -129,7 +129,7 @@ function AssignModal({ label, onClose }) {
   const searchInputRef = useRef(null)
   const dropdownRef = useRef(null)
 
-  const { data } = useOrders({ limit: 50, status: 'new,label_generated,inventory_ordered,packed,ready' })
+  const { data } = useOrders({ limit: 200, status: 'new,label_generated,inventory_ordered,packed,ready,shipped,delivered' })
   const orders = data?.orders || []
 
   useEffect(() => {
