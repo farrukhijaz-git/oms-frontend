@@ -4,6 +4,7 @@ import {
   Topbar, Panel, PanelHeader, PanelTitle, PanelBody,
   BtnPrimary, BtnSecondary, FormField, Input, Select, useToast,
 } from '../components.jsx'
+import { useBackgroundJobs } from '../context/BackgroundJobsContext'
 
 const INTERVALS = [
   { label: '5 minutes', value: 300 },
@@ -26,8 +27,11 @@ function SyncStatusBadge({ status }) {
 
 export default function AdminWalmartPage() {
   const toast = useToast()
-  const { data: status, isLoading } = useWalmartStatus()
-  const { data: logData } = useWalmartLog()
+  const { addJob, completeJob, failJob } = useBackgroundJobs()
+  const { data: status, isLoading, isError: statusError, refetch: refetchStatus } = useWalmartStatus()
+  const { data: logData, refetch: refetchLog } = useWalmartLog()
+
+  const handleRetry = () => { refetchStatus(); refetchLog() }
   const pollMutation = usePollNow()
   const credsMutation = useSaveCredentials()
   const settingsMutation = useUpdateSettings()
@@ -62,11 +66,12 @@ export default function AdminWalmartPage() {
   }
 
   const handlePollNow = async () => {
+    const jobId = addJob('poll', 'Manual poll')
     try {
       const result = await pollMutation.mutateAsync()
-      toast.success(`Polled: ${result.pulled} new, ${result.updated ?? 0} updated, ${result.skipped} skipped`)
+      completeJob(jobId, { pulled: (result.pulled ?? 0) + (result.updated ?? 0) })
     } catch (err) {
-      toast.error(err.response?.data?.error?.message || 'Poll failed')
+      failJob(jobId, err.response?.data?.error?.message || 'Poll failed')
     }
   }
 
@@ -74,7 +79,7 @@ export default function AdminWalmartPage() {
     e.preventDefault()
     try {
       await backfillMutation.mutateAsync(backfillDate)
-      toast.success('Backfill started — check sync log in a minute for results')
+      addJob('backfill', `Backfill from ${backfillDate}`)
     } catch (err) {
       toast.error(err.response?.data?.error?.message || 'Backfill failed')
     }
@@ -102,6 +107,11 @@ export default function AdminWalmartPage() {
           <PanelBody>
             {isLoading ? (
               <span className="oms-text-muted" style={{ fontSize: 13 }}>Loading…</span>
+            ) : statusError ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="oms-text-muted" style={{ fontSize: 13 }}>Service unavailable — may be waking up</span>
+                <BtnSecondary size="sm" onClick={handleRetry}>Retry</BtnSecondary>
+              </div>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -135,11 +135,182 @@ export function StatCard({ status, count, onClick }) {
   )
 }
 
+// ── Jobs Indicator (shown in every Topbar) ────────────────────
+import { useEffect, useRef } from 'react'
+import { useBackgroundJobs } from './context/BackgroundJobsContext'
+
+function relativeTime(ms) {
+  if (!ms) return ''
+  const secs = Math.floor((Date.now() - ms) / 1000)
+  if (secs < 60) return `${secs}s ago`
+  const mins = Math.floor(secs / 60)
+  if (mins < 60) return `${mins}m ago`
+  return `${Math.floor(mins / 60)}h ago`
+}
+
+function JobsIndicator() {
+  const { jobs, clearCompleted } = useBackgroundJobs()
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const running = jobs.filter(j => j.status === 'running').length
+  const failed  = jobs.filter(j => j.status === 'failed').length
+  const hasCompleted = jobs.some(j => j.status !== 'running')
+  const hasJobs = jobs.length > 0
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => hasJobs && setOpen(o => !o)}
+        title={hasJobs ? 'Background jobs' : 'No background jobs'}
+        style={{
+          position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          width: 32, height: 32, border: '1px solid var(--oms-border)', borderRadius: 8,
+          background: open ? 'var(--oms-navy-pale)' : 'transparent',
+          cursor: hasJobs ? 'pointer' : 'default',
+          color: hasJobs ? 'var(--oms-text-secondary)' : 'var(--oms-border)',
+          opacity: hasJobs ? 1 : 0.5,
+        }}
+      >
+        {running > 0 ? (
+          /* spinning activity icon when a job is running */
+          <div style={{
+            width: 15, height: 15, border: '2px solid #185FA5', borderTopColor: 'transparent',
+            borderRadius: '50%', animation: 'oms-spin 0.8s linear infinite',
+          }} />
+        ) : (
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        )}
+        {running > 0 && (
+          <span style={{
+            position: 'absolute', top: -5, right: -5,
+            minWidth: 16, height: 16, borderRadius: 8,
+            background: '#185FA5', color: '#fff',
+            fontSize: 10, fontWeight: 700, lineHeight: '16px',
+            textAlign: 'center', padding: '0 3px',
+          }}>
+            {running}
+          </span>
+        )}
+        {running === 0 && failed > 0 && hasJobs && (
+          <span style={{
+            position: 'absolute', top: -3, right: -3,
+            width: 9, height: 9, borderRadius: '50%',
+            background: '#DC2626', border: '2px solid #fff',
+          }} />
+        )}
+        {running === 0 && failed === 0 && hasJobs && (
+          <span style={{
+            position: 'absolute', top: -3, right: -3,
+            width: 9, height: 9, borderRadius: '50%',
+            background: '#639922', border: '2px solid #fff',
+          }} />
+        )}
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+          width: 300, background: '#fff', borderRadius: 10,
+          border: '1px solid var(--oms-border)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          zIndex: 200, overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 14px', borderBottom: '1px solid var(--oms-border)',
+          }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--oms-text-primary)' }}>
+              Background Jobs
+            </span>
+            {hasCompleted && (
+              <button
+                onClick={clearCompleted}
+                style={{ fontSize: 11, color: 'var(--oms-navy-accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Clear done
+              </button>
+            )}
+          </div>
+
+          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+            {jobs.length === 0 && (
+              <div style={{ padding: '16px 14px', fontSize: 12, color: 'var(--oms-text-muted)', textAlign: 'center' }}>
+                No recent jobs
+              </div>
+            )}
+            {jobs.map(job => (
+              <div key={job.id} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 10,
+                padding: '10px 14px', borderBottom: '1px solid var(--oms-border)',
+              }}>
+                <div style={{ flexShrink: 0, marginTop: 1 }}>
+                  {job.status === 'running' && (
+                    <div style={{
+                      width: 14, height: 14,
+                      border: '2px solid #185FA5', borderTopColor: 'transparent',
+                      borderRadius: '50%', animation: 'oms-spin 0.8s linear infinite',
+                    }} />
+                  )}
+                  {job.status === 'done' && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#639922" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  )}
+                  {job.status === 'partial' && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#BA7517" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                  )}
+                  {job.status === 'failed' && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DC2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--oms-text-primary)', marginBottom: 2 }}>
+                    {job.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--oms-text-muted)' }}>
+                    {job.status === 'running' && 'Running…'}
+                    {job.status === 'done' && (
+                      <>{job.result?.pulled != null ? `${job.result.pulled} orders synced` : 'Completed'} · {relativeTime(job.completedAt)}</>
+                    )}
+                    {job.status === 'partial' && (
+                      <>{job.result?.pulled != null ? `${job.result.pulled} orders synced, some errors` : 'Partial'} · {relativeTime(job.completedAt)}</>
+                    )}
+                    {job.status === 'failed' && (
+                      <span style={{ color: '#DC2626' }}>
+                        {job.error || job.result?.error_message || 'Failed'} · {relativeTime(job.completedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Topbar ────────────────────────────────────────────────────
 export function Topbar({ title, children }) {
   return (
     <div className="oms-topbar">
       <div className="oms-topbar-title">{title}</div>
+      <JobsIndicator />
       {children}
     </div>
   )

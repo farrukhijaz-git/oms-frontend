@@ -83,7 +83,7 @@ function UploadProgressCard({ job }) {
         ) : (
           <div style={{
             width: 14, height: 14, border: '2px solid #185FA5', borderTopColor: 'transparent',
-            borderRadius: '50%', flexShrink: 0, animation: 'spin 0.8s linear infinite',
+            borderRadius: '50%', flexShrink: 0, animation: 'oms-spin 0.8s linear infinite',
           }} />
         )}
         <span style={{ fontWeight: 600, color: 'var(--oms-text-primary)', fontSize: 12 }}>

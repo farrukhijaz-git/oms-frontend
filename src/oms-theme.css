@@ -60,6 +60,13 @@ ul, ol {
   --oms-shipped-bg:    #F1F3F5;   --oms-shipped-text:    #6B7280; --oms-shipped-dot:    #9CA3AF;
   --oms-delivered-bg:  #CCFBF1;  --oms-delivered-text:  #0D7C66; --oms-delivered-dot:  #0D9488;
 
+  /* Walmart marketplace statuses */
+  --oms-wm-created-bg:      #E6F1FB; --oms-wm-created-text:      #185FA5;
+  --oms-wm-acknowledged-bg: #FFF8ED; --oms-wm-acknowledged-text: #92400E;
+  --oms-wm-shipped-bg:      #EDE9FE; --oms-wm-shipped-text:      #5B21B6;
+  --oms-wm-delivered-bg:    #CCFBF1; --oms-wm-delivered-text:    #0D7C66;
+  --oms-wm-cancelled-bg:    #FEE2E2; --oms-wm-cancelled-text:    #991B1B;
+
   /* Platform badges */
   --oms-walmart-bg:    #FFF3E0; --oms-walmart-text:    #E65100;
   --oms-manual-bg:     #F1F3F5; --oms-manual-text:     #6B7280;
@@ -195,6 +202,15 @@ body {
 .oms-status-shipped   { background: var(--oms-shipped-bg);   color: var(--oms-shipped-text); }
 .oms-status-delivered { background: var(--oms-delivered-bg); color: var(--oms-delivered-text); }
 
+/* Walmart marketplace status badges */
+.oms-wm-status            { font-size: 11px; padding: 4px 10px; border-radius: var(--oms-radius-pill); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.oms-wm-status::before    { content: ''; display: block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+.oms-wm-created      { background: var(--oms-wm-created-bg);      color: var(--oms-wm-created-text); }
+.oms-wm-acknowledged { background: var(--oms-wm-acknowledged-bg); color: var(--oms-wm-acknowledged-text); }
+.oms-wm-shipped      { background: var(--oms-wm-shipped-bg);      color: var(--oms-wm-shipped-text); }
+.oms-wm-delivered    { background: var(--oms-wm-delivered-bg);    color: var(--oms-wm-delivered-text); }
+.oms-wm-cancelled    { background: var(--oms-wm-cancelled-bg);    color: var(--oms-wm-cancelled-text); }
+
 /* ── Status dot (standalone) ── */
 .oms-dot          { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .oms-dot-new       { background: var(--oms-new-dot); }
@@ -309,6 +325,7 @@ body {
 /* ── Loading skeleton ── */
 .oms-skeleton     { background: linear-gradient(90deg, #F0F0F0 25%, #E0E0E0 50%, #F0F0F0 75%); background-size: 200% 100%; animation: oms-shimmer 1.5s infinite; border-radius: 4px; }
 @keyframes oms-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes oms-spin    { to { transform: rotate(360deg); } }
 
 /* ── Utility ── */
 .oms-text-muted   { color: var(--oms-text-muted); }

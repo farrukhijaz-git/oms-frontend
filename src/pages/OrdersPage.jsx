@@ -9,10 +9,31 @@ import {
 } from '../components.jsx'
 import NewOrderModal from '../components/NewOrderModal'
 
-const STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
-const STATUS_LABEL = {
+const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
+const OMS_STATUS_LABEL = {
   new: 'New', label_generated: 'Label Gen.', inventory_ordered: 'Inv. Ordered',
   packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered',
+}
+
+const WM_STATUS_ORDER = ['Created', 'Acknowledged', 'Shipped', 'Delivered', 'Cancelled']
+const WM_STATUS_LABEL = {
+  Created: 'Created', Acknowledged: 'Acknowledged', Shipped: 'Shipped',
+  Delivered: 'Delivered', Cancelled: 'Cancelled',
+}
+
+function WalmartStatusBadge({ status }) {
+  if (!status) return <span className="oms-text-muted">—</span>
+  const cls = `oms-wm-status oms-wm-${status.toLowerCase()}`
+  return <span className={cls}>{status}</span>
+}
+
+function trackingUrl(tn) {
+  if (!tn) return null
+  if (/^1Z[A-Z0-9]{16}$/i.test(tn)) return `https://www.ups.com/track?tracknum=${tn}`
+  if (/^(9[2345][0-9]{20,}|420[0-9]{5}9[0-9]{21,})/.test(tn)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
+  if (/^[A-Z]{2}[0-9]{9}US$/.test(tn)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
+  if (/^[0-9]{12,22}$/.test(tn)) return `https://www.fedex.com/fedextrack/?trknbr=${tn}`
+  return null
 }
 
 function StatusUpdateModal({ order, onClose }) {
@@ -34,13 +55,13 @@ function StatusUpdateModal({ order, onClose }) {
   }
 
   return (
-    <Modal title="Update Status" onClose={onClose}>
+    <Modal title="Update OMS Status" onClose={onClose}>
       <form onSubmit={handleSubmit}>
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <FormField label="Status">
             <Select value={status} onChange={setStatus}>
-              {STATUS_ORDER.map(s => (
-                <option key={s} value={s}>{STATUS_LABEL[s] || s}</option>
+              {OMS_STATUS_ORDER.map(s => (
+                <option key={s} value={s}>{OMS_STATUS_LABEL[s] || s}</option>
               ))}
             </Select>
           </FormField>
@@ -78,7 +99,7 @@ function StatusUpdateModal({ order, onClose }) {
 export default function OrdersPage() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [filters, setFilters] = useState({ search: '', status: '', page: 1 })
+  const [filters, setFilters] = useState({ search: '', walmart_status: '', page: 1 })
   const [limit, setLimit] = useState(20)
   const [statusModal, setStatusModal] = useState(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
@@ -121,18 +142,18 @@ export default function OrdersPage() {
           />
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
             <FilterPill
-              active={!filters.status}
-              onClick={() => setFilters(f => ({ ...f, status: '', page: 1 }))}
+              active={!filters.walmart_status}
+              onClick={() => setFilters(f => ({ ...f, walmart_status: '', page: 1 }))}
             >
               All
             </FilterPill>
-            {STATUS_ORDER.map(s => (
+            {WM_STATUS_ORDER.map(s => (
               <FilterPill
                 key={s}
-                active={filters.status === s}
-                onClick={() => setFilters(f => ({ ...f, status: f.status === s ? '' : s, page: 1 }))}
+                active={filters.walmart_status === s}
+                onClick={() => setFilters(f => ({ ...f, walmart_status: f.walmart_status === s ? '' : s, page: 1 }))}
               >
-                {STATUS_LABEL[s]}
+                {WM_STATUS_LABEL[s]}
               </FilterPill>
             ))}
           </div>
@@ -152,23 +173,23 @@ export default function OrdersPage() {
         {/* Orders table */}
         <Panel>
           {isLoading ? (
-            <TableSkeleton rows={8} cols={7} />
+            <TableSkeleton rows={8} cols={8} />
           ) : orders.length === 0 ? (
             <EmptyState title="No orders found" sub="Try adjusting your filters or create a new order." />
           ) : (
             <div style={{ overflowX: 'auto' }}>
-            <table className="oms-table" style={{ minWidth: 900 }}>
+            <table className="oms-table" style={{ minWidth: 1000 }}>
               <thead>
                 <tr>
-                  <th>Order ID</th>
-                  <th>Customer</th>
-                  <th>Platform</th>
-                  <th>Items</th>
-                  <th>Status</th>
+                  <th>Order #</th>
                   <th>Order Date</th>
-                  <th>Ship By</th>
+                  <th>Customer</th>
+                  <th style={{ textAlign: 'right' }}>Total</th>
+                  <th>Items</th>
                   <th>Ship Node</th>
+                  <th>Ship By</th>
                   <th>Tracking</th>
+                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -177,6 +198,14 @@ export default function OrdersPage() {
                   <tr key={order.id} onClick={() => navigate(`/orders/${order.id}`)}>
                     <td>
                       <OrderId id={order.external_id ? `#${order.external_id}` : order.id.slice(0, 8)} />
+                      {order.customer_order_id && (
+                        <div className="oms-text-muted" style={{ fontSize: 10, marginTop: 2 }}>
+                          CO# {order.customer_order_id}
+                        </div>
+                      )}
+                    </td>
+                    <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </td>
                     <td>
                       <div style={{ fontWeight: 500, fontSize: 13 }}>{order.customer_name}</div>
@@ -186,18 +215,12 @@ export default function OrdersPage() {
                         </div>
                       )}
                     </td>
-                    <td><PlatformBadge platform={order.platform} /></td>
-                    <td className="oms-text-secondary">{order.item_count ?? '—'}</td>
-                    <td>
-                      <button
-                        onClick={e => { e.stopPropagation(); setStatusModal(order) }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                      >
-                        <StatusBadge status={order.status} />
-                      </button>
+                    <td className="oms-text-secondary" style={{ fontSize: 13, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {order.order_total ? `$${parseFloat(order.order_total).toFixed(2)}` : <span className="oms-text-muted">—</span>}
                     </td>
-                    <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
-                      {new Date(order.order_date || order.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    <td className="oms-text-secondary">{order.item_count ?? '—'}</td>
+                    <td className="oms-text-secondary" style={{ fontSize: 12 }}>
+                      {order.ship_node || <span className="oms-text-muted">—</span>}
                     </td>
                     <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                       {order.ship_by_date
@@ -205,14 +228,36 @@ export default function OrdersPage() {
                         : <span className="oms-text-muted">—</span>
                       }
                     </td>
-                    <td className="oms-text-secondary" style={{ fontSize: 12 }}>
-                      {order.ship_node || <span className="oms-text-muted">—</span>}
+                    <td style={{ fontSize: 11 }}>
+                      {order.tracking_number ? (
+                        trackingUrl(order.tracking_number) ? (
+                          <a
+                            href={trackingUrl(order.tracking_number)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="oms-order-id"
+                            style={{ fontSize: 11, color: 'var(--oms-navy-mid)', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            {order.tracking_number}
+                          </a>
+                        ) : (
+                          <span className="oms-order-id" style={{ fontSize: 11 }}>{order.tracking_number}</span>
+                        )
+                      ) : (
+                        <span className="oms-text-muted">—</span>
+                      )}
                     </td>
-                    <td style={{ fontSize: 12 }}>
-                      {order.tracking_number
-                        ? <span className="oms-order-id" style={{ fontSize: 11 }}>{order.tracking_number}</span>
-                        : <span className="oms-text-muted">—</span>
-                      }
+                    <td>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <WalmartStatusBadge status={order.walmart_status} />
+                        <button
+                          onClick={e => { e.stopPropagation(); setStatusModal(order) }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        >
+                          <StatusBadge status={order.status} />
+                        </button>
+                      </div>
                     </td>
                     <td>
                       <button
