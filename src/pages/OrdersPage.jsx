@@ -107,6 +107,19 @@ export default function OrdersPage() {
   const importCsv = useImportCsv()
 
   const activeFilters = { ...filters, limit }
+  // Convert date-only values (YYYY-MM-DD) to full UTC timestamps using the
+  // browser's local timezone so the backend comparison aligns with what the
+  // user sees in the UI (dates are displayed in local timezone).
+  const dateKeys = ['date_from', 'ship_by_from', 'date_to', 'ship_by_to']
+  dateKeys.forEach(k => {
+    if (activeFilters[k] && activeFilters[k].length === 10) {
+      if (k.endsWith('_to')) {
+        activeFilters[k] = new Date(activeFilters[k] + 'T23:59:59.999').toISOString()
+      } else {
+        activeFilters[k] = new Date(activeFilters[k] + 'T00:00:00').toISOString()
+      }
+    }
+  })
   // Strip empty string params so they don't get sent as empty query strings
   Object.keys(activeFilters).forEach(k => { if (activeFilters[k] === '') delete activeFilters[k] })
   const { data, isLoading } = useOrders(activeFilters)
