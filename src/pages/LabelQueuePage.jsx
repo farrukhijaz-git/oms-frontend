@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl } from '../hooks/useLabels'
+import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl, useDeleteLabel } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
 import { useUploadContext } from '../context/UploadContext'
 import {
@@ -29,6 +29,15 @@ const UploadIcon = () => (
     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
     <polyline points="17 8 12 3 7 8"/>
     <line x1="12" y1="3" x2="12" y2="15"/>
+  </svg>
+)
+
+const TrashIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/>
+    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+    <path d="M10 11v6M14 11v6"/>
+    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
   </svg>
 )
 
@@ -318,16 +327,42 @@ function AssignModal({ label, onClose }) {
   )
 }
 
+// ── DeleteConfirmModal ────────────────────────────────────────────────────────
+function DeleteConfirmModal({ label, onConfirm, onClose, isPending }) {
+  return (
+    <div className="oms-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="oms-modal" style={{ maxWidth: 380 }}>
+        <div className="oms-modal-title">Delete Label?</div>
+        <p style={{ fontSize: 13, color: 'var(--oms-text-secondary)', margin: '12px 0 0' }}>
+          This will permanently delete <strong>{label.original_filename}</strong> and remove the file from storage. This cannot be undone.
+        </p>
+        <ModalActions>
+          <BtnSecondary onClick={onClose} disabled={isPending}>Cancel</BtnSecondary>
+          <button
+            className="oms-btn oms-btn-danger"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            {isPending ? 'Deleting…' : 'Delete'}
+          </button>
+        </ModalActions>
+      </div>
+    </div>
+  )
+}
+
 // ── LabelQueuePage ────────────────────────────────────────────────────────────
 export default function LabelQueuePage() {
   const toast = useToast()
   const [tab, setTab] = useState('queue')
   const [assignModal, setAssignModal] = useState(null)
+  const [deleteModal, setDeleteModal] = useState(null)
   const fileRef = useRef()
   const { data: queueData, isLoading: queueLoading } = useLabelQueue()
   const { data: unmatchedData } = useLabelUnmatched()
   const uploadMutation = useUploadLabels()
   const confirmMutation = useConfirmLabel()
+  const deleteMutation = useDeleteLabel()
   const { addJob } = useUploadContext()
 
   const queue = queueData?.labels || []
@@ -355,6 +390,17 @@ export default function LabelQueuePage() {
       toast.success('Label confirmed')
     } catch {
       toast.error('Failed to confirm')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteModal) return
+    try {
+      await deleteMutation.mutateAsync(deleteModal.id)
+      toast.success('Label deleted')
+      setDeleteModal(null)
+    } catch {
+      toast.error('Failed to delete label')
     }
   }
 
@@ -494,6 +540,13 @@ export default function LabelQueuePage() {
                               Confirm
                             </button>
                             <BtnSecondary size="sm" onClick={() => setAssignModal(label)}>Change</BtnSecondary>
+                            <button
+                              onClick={() => setDeleteModal(label)}
+                              className="oms-btn oms-btn-sm oms-btn-danger"
+                              title="Delete label"
+                            >
+                              <TrashIcon />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -546,13 +599,22 @@ export default function LabelQueuePage() {
                         )}
                       </td>
                       <td>
-                        <button
-                          onClick={() => setAssignModal(label)}
-                          className="oms-btn oms-btn-sm"
-                          style={{ color: 'var(--oms-new-text)', background: 'var(--oms-new-bg)', border: 'none' }}
-                        >
-                          Assign
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => setAssignModal(label)}
+                            className="oms-btn oms-btn-sm"
+                            style={{ color: 'var(--oms-new-text)', background: 'var(--oms-new-bg)', border: 'none' }}
+                          >
+                            Assign
+                          </button>
+                          <button
+                            onClick={() => setDeleteModal(label)}
+                            className="oms-btn oms-btn-sm oms-btn-danger"
+                            title="Delete label"
+                          >
+                            <TrashIcon />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -566,6 +628,14 @@ export default function LabelQueuePage() {
       </div>
 
       {assignModal && <AssignModal label={assignModal} onClose={() => setAssignModal(null)} />}
+      {deleteModal && (
+        <DeleteConfirmModal
+          label={deleteModal}
+          onConfirm={handleDelete}
+          onClose={() => setDeleteModal(null)}
+          isPending={deleteMutation.isPending}
+        />
+      )}
     </div>
   )
 }

@@ -60,3 +60,13 @@ export function useAssignLabel() {
     },
   })
 }
+
+export function useDeleteLabel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (labelId) => api.delete(`/labels/${labelId}`).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['labels'] })
+    },
+  })
+}
