@@ -99,7 +99,7 @@ function StatusUpdateModal({ order, onClose }) {
 export default function OrdersPage() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [filters, setFilters] = useState({ search: '', walmart_status: '', page: 1, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '' })
+  const [filters, setFilters] = useState({ search: '', status: [], page: 1, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '' })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [limit, setLimit] = useState(20)
   const [statusModal, setStatusModal] = useState(null)
@@ -107,6 +107,12 @@ export default function OrdersPage() {
   const importCsv = useImportCsv()
 
   const activeFilters = { ...filters, limit }
+  // Convert status array to comma-separated string for the API
+  if (activeFilters.status && activeFilters.status.length > 0) {
+    activeFilters.status = activeFilters.status.join(',')
+  } else {
+    delete activeFilters.status
+  }
   // Convert date-only values (YYYY-MM-DD) to full UTC timestamps using the
   // browser's local timezone so the backend comparison aligns with what the
   // user sees in the UI (dates are displayed in local timezone).
@@ -154,61 +160,47 @@ export default function OrdersPage() {
 
       <div className="oms-content">
 
-        {/* Row 1: Search + Walmart status pills + rows-per-page + total */}
+        {/* Row 1: Search + OMS status pills + Filters button */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <SearchBox
             value={filters.search}
             onChange={v => setFilters(f => ({ ...f, search: v, page: 1 }))}
             placeholder="Search by name or order ID…"
           />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             <FilterPill
-              active={!filters.walmart_status}
-              onClick={() => setFilters(f => ({ ...f, walmart_status: '', page: 1 }))}
+              active={filters.status.length === 0}
+              onClick={() => setFilters(f => ({ ...f, status: [], page: 1 }))}
             >
               All
             </FilterPill>
-            {WM_STATUS_ORDER.map(s => (
+            {OMS_STATUS_ORDER.map(s => (
               <FilterPill
                 key={s}
-                active={filters.walmart_status === s}
-                onClick={() => setFilters(f => ({ ...f, walmart_status: f.walmart_status === s ? '' : s, page: 1 }))}
+                active={filters.status.includes(s)}
+                onClick={() => setFilters(f => {
+                  const cur = f.status
+                  const next = cur.includes(s) ? cur.filter(x => x !== s) : [...cur, s]
+                  return { ...f, status: next, page: 1 }
+                })}
               >
-                {WM_STATUS_LABEL[s]}
+                {OMS_STATUS_LABEL[s]}
               </FilterPill>
             ))}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            {total !== null && (
-              <span style={{ fontSize: 12, color: 'var(--oms-text-secondary)', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                {total.toLocaleString()} {total === 1 ? 'order' : 'orders'}
-              </span>
+          <button
+            className={`oms-btn oms-btn-secondary oms-btn-sm${showAdvanced ? ' active' : ''}`}
+            onClick={() => setShowAdvanced(v => !v)}
+            style={{ whiteSpace: 'nowrap', position: 'relative', marginLeft: 'auto' }}
+          >
+            Filters
+            {hasAdvancedFilters && (
+              <span style={{
+                position: 'absolute', top: -4, right: -4, width: 8, height: 8,
+                borderRadius: '50%', background: 'var(--oms-navy-accent)', border: '2px solid var(--oms-surface)'
+              }} />
             )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: 'var(--oms-text-muted)', whiteSpace: 'nowrap' }}>Rows per page</span>
-              <select
-                className="oms-select"
-                value={limit}
-                onChange={e => { setLimit(Number(e.target.value)); setFilters(f => ({ ...f, page: 1 })) }}
-                style={{ width: 72, fontSize: 12, padding: '4px 8px' }}
-              >
-                {[20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-            <button
-              className={`oms-btn oms-btn-secondary oms-btn-sm${showAdvanced ? ' active' : ''}`}
-              onClick={() => setShowAdvanced(v => !v)}
-              style={{ whiteSpace: 'nowrap', position: 'relative' }}
-            >
-              Filters
-              {hasAdvancedFilters && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -4, width: 8, height: 8,
-                  borderRadius: '50%', background: 'var(--oms-navy-accent)', border: '2px solid var(--oms-surface)'
-                }} />
-              )}
-            </button>
-          </div>
+          </button>
         </div>
 
         {/* Row 2: Advanced filters (collapsible) */}
@@ -220,54 +212,34 @@ export default function OrdersPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--oms-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Order Date</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="date"
-                  className="oms-input"
-                  value={filters.date_from}
+                <input type="date" className="oms-input" value={filters.date_from}
                   onChange={e => setFilters(f => ({ ...f, date_from: e.target.value, page: 1 }))}
-                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }}
-                />
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
                 <span style={{ fontSize: 12, color: 'var(--oms-text-muted)' }}>to</span>
-                <input
-                  type="date"
-                  className="oms-input"
-                  value={filters.date_to}
+                <input type="date" className="oms-input" value={filters.date_to}
                   onChange={e => setFilters(f => ({ ...f, date_to: e.target.value, page: 1 }))}
-                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }}
-                />
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
               </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--oms-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ship Node</span>
-              <input
-                type="text"
-                className="oms-input"
-                value={filters.ship_node}
+              <input type="text" className="oms-input" value={filters.ship_node}
                 onChange={e => setFilters(f => ({ ...f, ship_node: e.target.value, page: 1 }))}
                 placeholder="e.g. Texas Faheem"
-                style={{ fontSize: 12, padding: '4px 8px', width: 180 }}
-              />
+                style={{ fontSize: 12, padding: '4px 8px', width: 180 }} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--oms-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ship By</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input
-                  type="date"
-                  className="oms-input"
-                  value={filters.ship_by_from}
+                <input type="date" className="oms-input" value={filters.ship_by_from}
                   onChange={e => setFilters(f => ({ ...f, ship_by_from: e.target.value, page: 1 }))}
-                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }}
-                />
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
                 <span style={{ fontSize: 12, color: 'var(--oms-text-muted)' }}>to</span>
-                <input
-                  type="date"
-                  className="oms-input"
-                  value={filters.ship_by_to}
+                <input type="date" className="oms-input" value={filters.ship_by_to}
                   onChange={e => setFilters(f => ({ ...f, ship_by_to: e.target.value, page: 1 }))}
-                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }}
-                />
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
               </div>
             </div>
 
@@ -278,6 +250,26 @@ export default function OrdersPage() {
             )}
           </div>
         )}
+
+        {/* Row 3: Pagination controls + total count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'flex-end' }}>
+          {total !== null && (
+            <span style={{ fontSize: 12, color: 'var(--oms-text-secondary)', fontWeight: 500, whiteSpace: 'nowrap' }}>
+              {total.toLocaleString()} {total === 1 ? 'order' : 'orders'}
+            </span>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: 'var(--oms-text-muted)', whiteSpace: 'nowrap' }}>Rows per page</span>
+            <select
+              className="oms-select"
+              value={limit}
+              onChange={e => { setLimit(Number(e.target.value)); setFilters(f => ({ ...f, page: 1 })) }}
+              style={{ width: 72, fontSize: 12, padding: '4px 8px' }}
+            >
+              {[20, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+        </div>
 
         {/* Orders table */}
         <Panel>
