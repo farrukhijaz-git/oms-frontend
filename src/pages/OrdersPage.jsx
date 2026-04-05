@@ -345,15 +345,12 @@ export default function OrdersPage() {
                       )}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <WalmartStatusBadge status={order.walmart_status} />
-                        <button
-                          onClick={e => { e.stopPropagation(); setStatusModal(order) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
-                        >
-                          <StatusBadge status={order.status} />
-                        </button>
-                      </div>
+                      <button
+                        onClick={e => { e.stopPropagation(); setStatusModal(order) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                      >
+                        <StatusBadge status={order.status} />
+                      </button>
                     </td>
                     <td>
                       <button

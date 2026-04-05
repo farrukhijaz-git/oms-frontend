@@ -86,10 +86,18 @@ export function UploadProvider({ children }) {
     }
   }, [jobs, qc])
 
+  const dismissJob = useCallback((jobId) => {
+    setJobs(prev => {
+      const next = { ...prev }
+      delete next[jobId]
+      return next
+    })
+  }, [])
+
   const activeJobs = Object.entries(jobs).map(([id, job]) => ({ id, ...job }))
 
   return (
-    <UploadContext.Provider value={{ addJob, activeJobs }}>
+    <UploadContext.Provider value={{ addJob, dismissJob, activeJobs }}>
       {children}
     </UploadContext.Provider>
   )

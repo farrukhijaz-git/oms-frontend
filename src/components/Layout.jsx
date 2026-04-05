@@ -61,7 +61,7 @@ function NavItem({ to, label, icon: Icon, exact }) {
 }
 
 // ── Floating upload-progress indicator ───────────────────────────────────────
-function UploadProgressCard({ job }) {
+function UploadProgressCard({ job, onDismiss }) {
   const pct = job.total > 0 ? Math.round((job.current / job.total) * 100) : 0
   const isDone = job.status === 'done'
   const isError = job.status === 'error'
@@ -70,7 +70,22 @@ function UploadProgressCard({ job }) {
     <div style={{
       width: 256, background: '#fff', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
       border: '1px solid var(--oms-border)', padding: 12, fontSize: 12, pointerEvents: 'auto',
+      position: 'relative',
     }}>
+      {(isDone || isError) && (
+        <button
+          onClick={onDismiss}
+          style={{
+            position: 'absolute', top: 6, right: 6, background: 'none', border: 'none',
+            cursor: 'pointer', padding: 2, lineHeight: 1, color: 'var(--oms-text-muted)',
+          }}
+          aria-label="Dismiss"
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         {isDone ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#639922" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -117,11 +132,11 @@ function UploadProgressCard({ job }) {
 }
 
 function UploadProgressIndicator() {
-  const { activeJobs } = useUploadContext()
+  const { activeJobs, dismissJob } = useUploadContext()
   if (activeJobs.length === 0) return null
   return (
     <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 50, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
-      {activeJobs.map(job => <UploadProgressCard key={job.id} job={job} />)}
+      {activeJobs.map(job => <UploadProgressCard key={job.id} job={job} onDismiss={() => dismissJob(job.id)} />)}
     </div>
   )
 }
