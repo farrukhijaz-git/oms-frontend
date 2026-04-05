@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useOrder, useUpdateOrderStatus } from '../hooks/useOrders'
+import { useOrderLabels } from '../hooks/useLabels'
 import {
   Topbar, Panel, PanelHeader, PanelTitle, PanelBody,
   StatusBadge, StatusDot, StatusStepper, PlatformBadge,
@@ -9,10 +10,10 @@ import {
 } from '../components.jsx'
 import api from '../api/client'
 
-const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
+const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered', 'cancelled']
 const OMS_STATUS_LABEL = {
   new: 'New', label_generated: 'Label Gen.', inventory_ordered: 'Inv. Ordered',
-  packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered',
+  packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
 }
 
 function WalmartStatusBadge({ status }) {
@@ -136,6 +137,7 @@ export default function OrderDetailPage() {
   const { id } = useParams()
   const toast = useToast()
   const { data: order, isLoading } = useOrder(id)
+  const { data: labelsData } = useOrderLabels(id)
   const mutation = useUpdateOrderStatus()
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [newStatus, setNewStatus] = useState('')
@@ -179,10 +181,9 @@ export default function OrderDetailPage() {
     }
   }
 
-  const handleDownloadLabel = async () => {
-    if (!order.label_id) return
+  const handleDownloadLabel = async (labelId) => {
     try {
-      const { data } = await api.get(`/labels/${order.label_id}/download`)
+      const { data } = await api.get(`/labels/${labelId}/download`)
       window.open(data.url, '_blank')
     } catch {
       toast.error('Could not download label')
@@ -354,27 +355,84 @@ export default function OrderDetailPage() {
           {/* ── Right column ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
 
-            {/* Shipping label */}
+            {/* Shipping labels (multi-label) */}
             <Panel>
-              <PanelHeader><PanelTitle>Shipping Label</PanelTitle></PanelHeader>
+              <PanelHeader>
+                <PanelTitle>
+                  Shipping Labels
+                  {labelsData?.labels?.length > 0 && (
+                    <span style={{
+                      marginLeft: 8, fontSize: 11, fontWeight: 600,
+                      background: 'var(--oms-navy-pale)', color: 'var(--oms-navy-mid)',
+                      padding: '2px 7px', borderRadius: 10,
+                    }}>
+                      {labelsData.labels.length}
+                    </span>
+                  )}
+                </PanelTitle>
+              </PanelHeader>
               <PanelBody>
-                {order.label_id ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--oms-label-text)', display: 'inline-block' }} />
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-label-text)' }}>Label attached</span>
-                    </div>
-                    {order.tracking_number && (
-                      <div style={{ fontSize: 13, color: 'var(--oms-text-secondary)' }}>
-                        Tracking: <span className="oms-order-id">{order.tracking_number}</span>
+                {labelsData?.labels?.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {labelsData.labels.map((lbl, idx) => (
+                      <div key={lbl.id} style={{
+                        padding: '10px 12px',
+                        background: 'var(--oms-page-bg)',
+                        borderRadius: 8,
+                        border: '1px solid var(--oms-border)',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--oms-navy-mid)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                            </svg>
+                            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--oms-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {lbl.original_filename}
+                            </span>
+                          </div>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            padding: '2px 6px', borderRadius: 4, flexShrink: 0,
+                            background: lbl.match_status === 'confirmed' ? '#EAF3DE' : lbl.match_status === 'manually_assigned' ? '#EDE9FE' : '#F3F4F6',
+                            color: lbl.match_status === 'confirmed' ? '#639922' : lbl.match_status === 'manually_assigned' ? '#5B21B6' : '#6B7280',
+                          }}>
+                            {lbl.match_status === 'manually_assigned' ? 'assigned' : lbl.match_status}
+                          </span>
+                        </div>
+
+                        {lbl.tracking_number && (
+                          <div style={{ marginBottom: 6 }}>
+                            <TrackingLink tn={lbl.tracking_number} style={{ fontSize: 11 }} />
+                          </div>
+                        )}
+
+                        {lbl.extracted_name && (
+                          <div style={{ fontSize: 11, color: 'var(--oms-text-muted)', marginBottom: 6 }}>
+                            {lbl.extracted_name}
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                          <span style={{ fontSize: 10, color: 'var(--oms-text-muted)' }}>
+                            {new Date(lbl.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </span>
+                          <button
+                            onClick={() => handleDownloadLabel(lbl.id)}
+                            style={{
+                              fontSize: 11, fontWeight: 500, color: 'var(--oms-navy-mid)',
+                              background: 'none', border: '1px solid var(--oms-navy-mid)',
+                              borderRadius: 4, padding: '2px 8px', cursor: 'pointer',
+                            }}
+                          >
+                            Download
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    <div style={{ marginTop: 4 }}>
-                      <BtnSecondary size="sm" onClick={handleDownloadLabel}>Download Label</BtnSecondary>
-                    </div>
+                    ))}
                   </div>
                 ) : (
-                  <span className="oms-text-muted" style={{ fontSize: 13 }}>No label attached</span>
+                  <span className="oms-text-muted" style={{ fontSize: 13 }}>No labels attached</span>
                 )}
               </PanelBody>
             </Panel>

@@ -61,6 +61,14 @@ export function useAssignLabel() {
   })
 }
 
+export function useOrderLabels(orderId) {
+  return useQuery({
+    queryKey: ['labels', 'by-order', orderId],
+    queryFn: () => api.get(`/labels/by-order/${orderId}`).then(r => r.data),
+    enabled: !!orderId,
+  })
+}
+
 export function useDeleteLabel() {
   const qc = useQueryClient()
   return useMutation({
