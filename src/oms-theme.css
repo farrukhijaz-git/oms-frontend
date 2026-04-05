@@ -59,6 +59,7 @@ ul, ol {
   --oms-ready-bg:      #FDF2F8; --oms-ready-text:      #831843; --oms-ready-dot:      #9D174D;
   --oms-shipped-bg:    #F1F3F5;   --oms-shipped-text:    #6B7280; --oms-shipped-dot:    #9CA3AF;
   --oms-delivered-bg:  #CCFBF1;  --oms-delivered-text:  #0D7C66; --oms-delivered-dot:  #0D9488;
+  --oms-cancelled-bg:  #FEE2E2;  --oms-cancelled-text:  #991B1B; --oms-cancelled-dot:  #DC2626;
 
   /* Walmart marketplace statuses */
   --oms-wm-created-bg:      #E6F1FB; --oms-wm-created-text:      #185FA5;
@@ -200,7 +201,8 @@ body {
 .oms-status-packed    { background: var(--oms-packed-bg);    color: var(--oms-packed-text); }
 .oms-status-ready     { background: var(--oms-ready-bg);     color: var(--oms-ready-text); }
 .oms-status-shipped   { background: var(--oms-shipped-bg);   color: var(--oms-shipped-text); }
-.oms-status-delivered { background: var(--oms-delivered-bg); color: var(--oms-delivered-text); }
+.oms-status-delivered  { background: var(--oms-delivered-bg);  color: var(--oms-delivered-text); }
+.oms-status-cancelled  { background: var(--oms-cancelled-bg);  color: var(--oms-cancelled-text); }
 
 /* Walmart marketplace status badges */
 .oms-wm-status            { font-size: 11px; padding: 4px 10px; border-radius: var(--oms-radius-pill); font-weight: 600; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
@@ -219,7 +221,8 @@ body {
 .oms-dot-packed    { background: var(--oms-packed-dot); }
 .oms-dot-ready     { background: var(--oms-ready-dot); }
 .oms-dot-shipped   { background: var(--oms-shipped-dot); }
-.oms-dot-delivered { background: var(--oms-delivered-dot); }
+.oms-dot-delivered  { background: var(--oms-delivered-dot); }
+.oms-dot-cancelled  { background: var(--oms-cancelled-dot); }
 
 /* ── Filter pills ── */
 .oms-filter-pill  { font-size: 11px; padding: 4px 10px; border-radius: var(--oms-radius-pill); border: 1px solid var(--oms-border-mid); background: var(--oms-surface-alt); color: var(--oms-text-secondary); cursor: pointer; font-weight: 500; transition: all 0.1s; white-space: nowrap; }

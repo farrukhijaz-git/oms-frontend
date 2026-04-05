@@ -9,10 +9,10 @@ import {
 } from '../components.jsx'
 import NewOrderModal from '../components/NewOrderModal'
 
-const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
+const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered', 'cancelled']
 const OMS_STATUS_LABEL = {
   new: 'New', label_generated: 'Label Gen.', inventory_ordered: 'Inv. Ordered',
-  packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered',
+  packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered', cancelled: 'Cancelled',
 }
 
 const WM_STATUS_ORDER = ['Created', 'Acknowledged', 'Shipped', 'Delivered', 'Cancelled']

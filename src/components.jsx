@@ -13,6 +13,7 @@ const STATUS_CLASS = {
   ready:             'oms-status-ready',
   shipped:           'oms-status-shipped',
   delivered:         'oms-status-delivered',
+  cancelled:         'oms-status-cancelled',
 }
 const STATUS_LABEL = {
   new:               'New',
@@ -22,6 +23,7 @@ const STATUS_LABEL = {
   ready:             'Ready',
   shipped:           'Shipped',
   delivered:         'Delivered',
+  cancelled:         'Cancelled',
 }
 export function StatusBadge({ status }) {
   return (
@@ -454,6 +456,23 @@ const STEP_LABELS = {
   packed: 'Packed', ready: 'Ready', shipped: 'Shipped', delivered: 'Delivered'
 }
 export function StatusStepper({ currentStatus }) {
+  if (currentStatus === 'cancelled') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0' }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'var(--oms-cancelled-bg)', color: 'var(--oms-cancelled-text)',
+          borderRadius: 8, padding: '6px 14px', fontWeight: 600, fontSize: 13,
+        }}>
+          <span style={{ fontSize: 15 }}>✕</span> Order Cancelled on Walmart
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--oms-text-muted)' }}>
+          This order was cancelled and will not be fulfilled.
+        </span>
+      </div>
+    )
+  }
+
   const currentIdx = STATUSES.indexOf(currentStatus)
   return (
     <div className="oms-stepper">
