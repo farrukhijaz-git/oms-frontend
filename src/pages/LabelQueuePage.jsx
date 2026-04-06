@@ -502,7 +502,7 @@ export default function LabelQueuePage() {
     <div className="oms-main">
 
       <Topbar title="Label Queue">
-        <span className="oms-text-muted" style={{ fontSize: 12 }}>
+        <span className="oms-text-muted oms-hide-mobile" style={{ fontSize: 12 }}>
           {queue.length} pending · {unmatched.length} unmatched
         </span>
       </Topbar>

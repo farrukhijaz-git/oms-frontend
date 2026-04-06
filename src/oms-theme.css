@@ -348,7 +348,32 @@ body {
   .oms-mobile-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; font-weight: 500; color: var(--oms-text-muted); cursor: pointer; padding: 8px 4px; }
   .oms-mobile-nav-item.active { color: var(--oms-navy-mid); }
   .oms-content    { padding: 16px; padding-bottom: 72px; }
+
+  /* Topbar — allow wrapping on mobile instead of clipping content */
+  .oms-topbar     { height: auto; min-height: var(--oms-topbar-height); flex-wrap: wrap; padding: 8px 16px; gap: 8px; }
+  .oms-topbar-title { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Utility: hide secondary content on mobile */
+  .oms-hide-mobile { display: none !important; }
+
+  /* Search — full-width so it doesn't crowd the filter pills */
+  .oms-search     { width: 100%; }
+
+  /* Status stepper — hide text labels, keep circles; shrink for 7 steps */
+  .oms-stepper    { padding: 12px 10px; }
+  .oms-step-label { display: none; }
+  .oms-step-circle { width: 22px; height: 22px; font-size: 9px; }
+  .oms-step-line  { top: 11px; }
+
+  /* Toast — raise above mobile nav bar, span full width */
+  .oms-toast-container { bottom: 72px; right: 12px; left: 12px; }
+  .oms-toast      { min-width: 0; }
 }
 @media (min-width: 769px) {
   .oms-mobile-nav { display: none; }
+}
+
+/* ── Very small screens (< 480px) ── */
+@media (max-width: 480px) {
+  .oms-stat-row   { grid-template-columns: repeat(2, 1fr); }
 }

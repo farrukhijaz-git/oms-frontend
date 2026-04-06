@@ -69,14 +69,14 @@ export default function DashboardPage() {
     <div className="oms-main">
       <Topbar title="Dashboard">
         {walmartStatus?.configured && (
-          <>
+          <span className="oms-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span className="oms-pill oms-pill-green">● Walmart connected</span>
             {walmartStatus.last_polled_at && (
               <span className="oms-text-muted" style={{ fontSize: 12 }}>
                 Last sync {formatRelative(walmartStatus.last_polled_at)}
               </span>
             )}
-          </>
+          </span>
         )}
         <label className="oms-btn oms-btn-secondary oms-btn-sm" style={{ cursor: 'pointer' }}>
           Import CSV

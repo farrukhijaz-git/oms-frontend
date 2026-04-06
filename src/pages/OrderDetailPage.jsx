@@ -214,12 +214,14 @@ export default function OrderDetailPage() {
         <Link to="/orders" style={{ fontSize: 12, color: 'var(--oms-text-muted)', textDecoration: 'none' }}>
           ← Orders
         </Link>
-        {order.external_id && (
-          <span className="oms-order-id" style={{ fontSize: 12 }}>#{order.external_id}</span>
-        )}
-        <PlatformBadge platform={order.platform} />
-        {order.walmart_status && <WalmartStatusBadge status={order.walmart_status} />}
-        <StatusBadge status={order.status} />
+        <div className="oms-hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {order.external_id && (
+            <span className="oms-order-id" style={{ fontSize: 12 }}>#{order.external_id}</span>
+          )}
+          <PlatformBadge platform={order.platform} />
+          {order.walmart_status && <WalmartStatusBadge status={order.walmart_status} />}
+          <StatusBadge status={order.status} />
+        </div>
         <BtnPrimary size="sm" onClick={() => setShowStatusModal(true)}>Update Status</BtnPrimary>
       </Topbar>
 
@@ -231,7 +233,7 @@ export default function OrderDetailPage() {
         </Panel>
 
         {/* Two-column layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 14, alignItems: 'start', minWidth: 0 }}>
+        <div className="oms-two-col" style={{ alignItems: 'start', minWidth: 0 }}>
 
           {/* ── Left column ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
@@ -303,7 +305,7 @@ export default function OrderDetailPage() {
                 </div>
 
                 {/* 3-column meta grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px 20px', minWidth: 0 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px 20px', minWidth: 0 }}>
                   {order.customer_email && (
                     <FieldSm label="Email">
                       <span style={{ wordBreak: 'break-all' }}>{order.customer_email}</span>
