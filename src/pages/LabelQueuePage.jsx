@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useLabelQueue, useLabelUnmatched, useUploadLabels, useConfirmLabel, useAssignLabel, useGetLabelUrl, useDeleteLabel } from '../hooks/useLabels'
 import { useOrders } from '../hooks/useOrders'
+import { useSendShipmentToWalmart } from '../hooks/useWalmart'
 import { useUploadContext } from '../context/UploadContext'
 import {
   Topbar, Panel, BtnPrimary, BtnSecondary,
@@ -149,7 +150,7 @@ function OrderHoverCard({ label, children }) {
 }
 
 // ── AssignModal ───────────────────────────────────────────────────────────────
-function AssignModal({ label, onClose }) {
+function AssignModal({ label, onClose, onAssigned }) {
   const toast = useToast()
   const confirmMutation = useConfirmLabel()
   const assignMutation = useAssignLabel()
@@ -235,7 +236,11 @@ function AssignModal({ label, onClose }) {
         await assignMutation.mutateAsync({ labelId: label.id, orderId })
       }
       toast.success('Label assigned')
-      onClose()
+      if (onAssigned) {
+        onAssigned(selectedOrder, label.tracking_number)
+      } else {
+        onClose()
+      }
     } catch {
       toast.error('Failed to assign')
     }
@@ -351,12 +356,88 @@ function DeleteConfirmModal({ label, onConfirm, onClose, isPending }) {
   )
 }
 
+// ── Walmart helpers ───────────────────────────────────────────────────────────
+
+function detectCarrier(tn) {
+  if (!tn) return 'UPS'
+  if (/^1Z[A-Z0-9]{16}$/i.test(tn)) return 'UPS'
+  if (/^(9[0-9]{21,34}|[A-Z]{2}[0-9]{9}US|420[0-9]{5})/.test(tn)) return 'USPS'
+  if (/^[0-9]{12,22}$/.test(tn)) return 'FedEx'
+  return 'UPS'
+}
+
+/** Returns true when tracking should be offered to push to Walmart. */
+function needsWalmartShip(platform, walmartStatus, trackingPushed, trackingNumber) {
+  if (platform !== 'walmart') return false
+  if (!trackingNumber) return false
+  if (trackingPushed) return false
+  const ws = (walmartStatus || '').toLowerCase()
+  return !['shipped', 'delivered', 'cancelled'].includes(ws)
+}
+
+// ── WalmartShipModal ──────────────────────────────────────────────────────────
+function WalmartShipModal({ orderId, trackingNumber, onClose }) {
+  const toast = useToast()
+  const [carrier, setCarrier] = useState(() => detectCarrier(trackingNumber))
+  const mutation = useSendShipmentToWalmart()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await mutation.mutateAsync({ order_id: orderId, tracking_number: trackingNumber, carrier })
+      toast.success('Tracking sent to Walmart')
+      onClose()
+    } catch (err) {
+      toast.error(err?.response?.data?.error?.message || 'Failed to send tracking to Walmart')
+    }
+  }
+
+  return (
+    <div className="oms-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="oms-modal" style={{ maxWidth: 400 }}>
+        <div className="oms-modal-title">Send Tracking to Walmart</div>
+        <p style={{ fontSize: 13, color: 'var(--oms-text-secondary)', margin: '8px 0 16px' }}>
+          Walmart hasn't received the tracking number for this order yet. Send it now to mark the order as shipped.
+        </p>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div className="oms-label">Tracking Number</div>
+            <input
+              className="oms-input"
+              value={trackingNumber}
+              readOnly
+              style={{ background: 'var(--oms-page-bg)', color: 'var(--oms-text-secondary)', cursor: 'default' }}
+            />
+          </div>
+          <div>
+            <div className="oms-label">Carrier</div>
+            <select className="oms-select" value={carrier} onChange={e => setCarrier(e.target.value)}>
+              <option value="UPS">UPS</option>
+              <option value="USPS">USPS</option>
+              <option value="FedEx">FedEx</option>
+              <option value="DHL">DHL</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <ModalActions>
+            <BtnSecondary onClick={onClose} disabled={mutation.isPending}>Skip</BtnSecondary>
+            <BtnPrimary loading={mutation.isPending}>
+              {mutation.isPending ? 'Sending…' : 'Send to Walmart'}
+            </BtnPrimary>
+          </ModalActions>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── LabelQueuePage ────────────────────────────────────────────────────────────
 export default function LabelQueuePage() {
   const toast = useToast()
   const [tab, setTab] = useState('queue')
   const [assignModal, setAssignModal] = useState(null)
   const [deleteModal, setDeleteModal] = useState(null)
+  const [walmartShipPrompt, setWalmartShipPrompt] = useState(null)
   const fileRef = useRef()
   const { data: queueData, isLoading: queueLoading } = useLabelQueue()
   const { data: unmatchedData } = useLabelUnmatched()
@@ -388,6 +469,14 @@ export default function LabelQueuePage() {
     try {
       await confirmMutation.mutateAsync({ labelId: label.id, orderId: label.order_id })
       toast.success('Label confirmed')
+      if (needsWalmartShip(
+        label.matched_platform,
+        label.matched_walmart_status,
+        label.matched_tracking_pushed_to_walmart,
+        label.tracking_number
+      )) {
+        setWalmartShipPrompt({ orderId: label.order_id, trackingNumber: label.tracking_number })
+      }
     } catch {
       toast.error('Failed to confirm')
     }
@@ -627,13 +716,36 @@ export default function LabelQueuePage() {
 
       </div>
 
-      {assignModal && <AssignModal label={assignModal} onClose={() => setAssignModal(null)} />}
+      {assignModal && (
+        <AssignModal
+          label={assignModal}
+          onClose={() => setAssignModal(null)}
+          onAssigned={(order, trackingNumber) => {
+            setAssignModal(null)
+            if (needsWalmartShip(
+              order?.platform,
+              order?.walmart_status,
+              order?.tracking_pushed_to_walmart,
+              trackingNumber || assignModal?.tracking_number
+            )) {
+              setWalmartShipPrompt({ orderId: order.id, trackingNumber: trackingNumber || assignModal?.tracking_number })
+            }
+          }}
+        />
+      )}
       {deleteModal && (
         <DeleteConfirmModal
           label={deleteModal}
           onConfirm={handleDelete}
           onClose={() => setDeleteModal(null)}
           isPending={deleteMutation.isPending}
+        />
+      )}
+      {walmartShipPrompt && (
+        <WalmartShipModal
+          orderId={walmartShipPrompt.orderId}
+          trackingNumber={walmartShipPrompt.trackingNumber}
+          onClose={() => setWalmartShipPrompt(null)}
         />
       )}
     </div>

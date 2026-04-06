@@ -50,3 +50,15 @@ export function useUpdateSettings() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['walmart'] }),
   })
 }
+
+export function useSendShipmentToWalmart() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ order_id, tracking_number, carrier, ship_datetime }) =>
+      api.post('/walmart/ship', { order_id, tracking_number, carrier, ship_datetime }).then(r => r.data),
+    onSuccess: (_, { order_id }) => {
+      qc.invalidateQueries({ queryKey: ['orders', order_id] })
+      qc.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+}

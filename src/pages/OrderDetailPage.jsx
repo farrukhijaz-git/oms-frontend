@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useOrder, useUpdateOrderStatus } from '../hooks/useOrders'
 import { useOrderLabels } from '../hooks/useLabels'
+import { useSendShipmentToWalmart } from '../hooks/useWalmart'
 import {
   Topbar, Panel, PanelHeader, PanelTitle, PanelBody,
   StatusBadge, StatusDot, StatusStepper, PlatformBadge,
@@ -29,6 +30,14 @@ function trackingLink(tn) {
   if (/^[A-Z]{2}[0-9]{9}US$/.test(tn)) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tn}`
   if (/^[0-9]{12,22}$/.test(tn)) return `https://www.fedex.com/fedextrack/?trknbr=${tn}`
   return null
+}
+
+function detectCarrierFromTracking(tn) {
+  if (!tn) return 'UPS'
+  if (/^1Z[A-Z0-9]{16}$/i.test(tn)) return 'UPS'
+  if (/^(9[0-9]{21,34}|[A-Z]{2}[0-9]{9}US|420[0-9]{5})/.test(tn)) return 'USPS'
+  if (/^[0-9]{12,22}$/.test(tn)) return 'FedEx'
+  return 'UPS'
 }
 
 const LBL = { fontSize: 11, color: 'var(--oms-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4, fontWeight: 500 }
@@ -143,6 +152,9 @@ export default function OrderDetailPage() {
   const [newStatus, setNewStatus] = useState('')
   const [note, setNote] = useState('')
   const [tracking, setTracking] = useState('')
+  const [showWalmartShipModal, setShowWalmartShipModal] = useState(false)
+  const [walmartCarrier, setWalmartCarrier] = useState('UPS')
+  const walmartShipMutation = useSendShipmentToWalmart()
 
   useEffect(() => {
     if (id) api.post(`/orders/${id}/view`).catch(() => {})
@@ -324,8 +336,29 @@ export default function OrderDetailPage() {
                 {order.tracking_number && (
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--oms-border)' }}>
                     <div style={LBL}>Tracking Number</div>
-                    <div style={{ marginTop: 4 }}>
+                    <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                       <TrackingLink tn={order.tracking_number} style={{ fontSize: 13 }} />
+                      {order.platform === 'walmart' &&
+                        !order.tracking_pushed_to_walmart &&
+                        !['Shipped', 'Delivered', 'Cancelled'].includes(order.walmart_status) && (
+                          <button
+                            onClick={() => {
+                              setWalmartCarrier(detectCarrierFromTracking(order.tracking_number))
+                              setShowWalmartShipModal(true)
+                            }}
+                            style={{
+                              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                              background: '#FFF8ED', color: '#92400E',
+                              border: '1px solid #F59E0B', borderRadius: 5,
+                              padding: '3px 10px', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            Send to Walmart
+                          </button>
+                        )}
+                      {order.platform === 'walmart' && order.tracking_pushed_to_walmart && (
+                        <span style={{ fontSize: 11, color: '#639922', fontWeight: 500 }}>✓ Sent to Walmart</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -489,6 +522,57 @@ export default function OrderDetailPage() {
         </div>{/* end two-column grid */}
 
       </div>
+
+      {/* Send tracking to Walmart modal */}
+      {showWalmartShipModal && (
+        <Modal title="Send Tracking to Walmart" onClose={() => setShowWalmartShipModal(false)}>
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await walmartShipMutation.mutateAsync({
+                order_id: order.id,
+                tracking_number: order.tracking_number,
+                carrier: walmartCarrier,
+              })
+              toast.success('Tracking sent to Walmart')
+              setShowWalmartShipModal(false)
+            } catch (err) {
+              toast.error(err?.response?.data?.error?.message || 'Failed to send tracking to Walmart')
+            }
+          }}>
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--oms-text-secondary)' }}>
+                Walmart hasn't received the tracking number for this order. Send it now to mark the order as shipped on Walmart.
+              </p>
+              <FormField label="Tracking Number">
+                <input
+                  className="oms-input"
+                  value={order.tracking_number}
+                  readOnly
+                  style={{ background: 'var(--oms-page-bg)', color: 'var(--oms-text-secondary)', cursor: 'default' }}
+                />
+              </FormField>
+              <FormField label="Carrier">
+                <Select value={walmartCarrier} onChange={setWalmartCarrier}>
+                  <option value="UPS">UPS</option>
+                  <option value="USPS">USPS</option>
+                  <option value="FedEx">FedEx</option>
+                  <option value="DHL">DHL</option>
+                  <option value="Other">Other</option>
+                </Select>
+              </FormField>
+            </div>
+            <ModalActions>
+              <BtnSecondary onClick={() => setShowWalmartShipModal(false)} disabled={walmartShipMutation.isPending}>
+                Cancel
+              </BtnSecondary>
+              <BtnPrimary loading={walmartShipMutation.isPending}>
+                {walmartShipMutation.isPending ? 'Sending…' : 'Send to Walmart'}
+              </BtnPrimary>
+            </ModalActions>
+          </form>
+        </Modal>
+      )}
 
       {/* Status update modal */}
       {showStatusModal && (
