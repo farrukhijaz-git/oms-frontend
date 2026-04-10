@@ -9,6 +9,22 @@ import {
 } from '../components.jsx'
 import NewOrderModal from '../components/NewOrderModal'
 
+function SortTh({ label, field, sort, onSort, style }) {
+  const active = sort.sort_by === field
+  const nextDir = active && sort.sort_dir === 'desc' ? 'asc' : 'desc'
+  return (
+    <th
+      style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', ...style }}
+      onClick={() => onSort(field, nextDir)}
+    >
+      {label}
+      <span style={{ marginLeft: 4, fontSize: 10, color: active ? 'var(--oms-navy-accent)' : 'var(--oms-border)' }}>
+        {active ? (sort.sort_dir === 'asc' ? '↑' : '↓') : '↕'}
+      </span>
+    </th>
+  )
+}
+
 const OMS_STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered', 'cancelled']
 const OMS_STATUS_LABEL = {
   new: 'New', label_generated: 'Label Gen.', inventory_ordered: 'Inv. Ordered',
@@ -99,14 +115,15 @@ function StatusUpdateModal({ order, onClose }) {
 export default function OrdersPage() {
   const navigate = useNavigate()
   const toast = useToast()
-  const [filters, setFilters] = useState({ search: '', status: [], page: 1, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '' })
+  const [filters, setFilters] = useState({ search: '', status: [], page: 1, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '', deliver_by_from: '', deliver_by_to: '' })
+  const [sort, setSort] = useState({ sort_by: 'order_date', sort_dir: 'desc' })
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [limit, setLimit] = useState(20)
   const [statusModal, setStatusModal] = useState(null)
   const [showNewOrder, setShowNewOrder] = useState(false)
   const importCsv = useImportCsv()
 
-  const activeFilters = { ...filters, limit }
+  const activeFilters = { ...filters, ...sort, limit }
   // Convert status array to comma-separated string for the API
   if (activeFilters.status && activeFilters.status.length > 0) {
     activeFilters.status = activeFilters.status.join(',')
@@ -116,7 +133,7 @@ export default function OrdersPage() {
   // Convert date-only values (YYYY-MM-DD) to full UTC timestamps using the
   // browser's local timezone so the backend comparison aligns with what the
   // user sees in the UI (dates are displayed in local timezone).
-  const dateKeys = ['date_from', 'ship_by_from', 'date_to', 'ship_by_to']
+  const dateKeys = ['date_from', 'ship_by_from', 'date_to', 'ship_by_to', 'deliver_by_from', 'deliver_by_to']
   dateKeys.forEach(k => {
     if (activeFilters[k] && activeFilters[k].length === 10) {
       if (k.endsWith('_to')) {
@@ -132,8 +149,9 @@ export default function OrdersPage() {
   const orders = data?.orders || []
   const total = data?.total ?? null
 
-  const hasAdvancedFilters = filters.date_from || filters.date_to || filters.ship_node || filters.ship_by_from || filters.ship_by_to
-  const clearAdvanced = () => setFilters(f => ({ ...f, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '', page: 1 }))
+  const hasAdvancedFilters = filters.date_from || filters.date_to || filters.ship_node || filters.ship_by_from || filters.ship_by_to || filters.deliver_by_from || filters.deliver_by_to
+  const clearAdvanced = () => setFilters(f => ({ ...f, date_from: '', date_to: '', ship_node: '', ship_by_from: '', ship_by_to: '', deliver_by_from: '', deliver_by_to: '', page: 1 }))
+  const handleSort = (field, dir) => { setSort({ sort_by: field, sort_dir: dir }); setFilters(f => ({ ...f, page: 1 })) }
 
   const handleCsvImport = async (e) => {
     const file = e.target.files?.[0]
@@ -243,6 +261,19 @@ export default function OrdersPage() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--oms-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deliver By</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input type="date" className="oms-input" value={filters.deliver_by_from}
+                  onChange={e => setFilters(f => ({ ...f, deliver_by_from: e.target.value, page: 1 }))}
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
+                <span style={{ fontSize: 12, color: 'var(--oms-text-muted)' }}>to</span>
+                <input type="date" className="oms-input" value={filters.deliver_by_to}
+                  onChange={e => setFilters(f => ({ ...f, deliver_by_to: e.target.value, page: 1 }))}
+                  style={{ fontSize: 12, padding: '4px 8px', width: 140 }} />
+              </div>
+            </div>
+
             {hasAdvancedFilters && (
               <button className="oms-btn oms-btn-secondary oms-btn-sm" onClick={clearAdvanced}>
                 Clear filters
@@ -283,12 +314,13 @@ export default function OrdersPage() {
               <thead>
                 <tr>
                   <th>Order #</th>
-                  <th>Order Date</th>
-                  <th>Customer</th>
-                  <th style={{ textAlign: 'right' }}>Total</th>
+                  <SortTh label="Order Date"  field="order_date"     sort={sort} onSort={handleSort} />
+                  <SortTh label="Customer"    field="customer_name"  sort={sort} onSort={handleSort} />
+                  <SortTh label="Total"       field="order_total"    sort={sort} onSort={handleSort} style={{ textAlign: 'right' }} />
                   <th>Items</th>
                   <th>Ship Node</th>
-                  <th>Ship By</th>
+                  <SortTh label="Ship By"     field="ship_by_date"   sort={sort} onSort={handleSort} />
+                  <SortTh label="Deliver By"  field="deliver_by_date" sort={sort} onSort={handleSort} />
                   <th>Tracking</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -326,6 +358,12 @@ export default function OrdersPage() {
                     <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
                       {order.ship_by_date
                         ? new Date(order.ship_by_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : <span className="oms-text-muted">—</span>
+                      }
+                    </td>
+                    <td className="oms-text-muted" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+                      {order.deliver_by_date
+                        ? new Date(order.deliver_by_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                         : <span className="oms-text-muted">—</span>
                       }
                     </td>
