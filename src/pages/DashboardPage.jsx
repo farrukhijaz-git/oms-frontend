@@ -11,6 +11,95 @@ import NewOrderModal from '../components/NewOrderModal'
 
 const STATUS_ORDER = ['new', 'label_generated', 'inventory_ordered', 'packed', 'ready', 'shipped', 'delivered']
 
+// ── At-risk helpers ───────────────────────────────────────────────────────────
+
+/** Days from now (negative = overdue). */
+function daysFromNow(dateStr) {
+  if (!dateStr) return null
+  const diffMs = new Date(dateStr).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)
+  return Math.ceil(diffMs / 86400000)
+}
+
+/** Visual grade based on days remaining. */
+function urgencyGrade(days) {
+  if (days === null) return null
+  if (days < 0)  return { color: '#991B1B', bg: '#FEE2E2', label: `${Math.abs(days)}d overdue`, weight: 600 }
+  if (days === 0) return { color: '#9A3412', bg: '#FFEDD5', label: 'Due today',   weight: 600 }
+  if (days === 1) return { color: '#92400E', bg: '#FEF3C7', label: 'Tomorrow',    weight: 500 }
+  if (days <= 3)  return { color: '#78350F', bg: '#FEF9C3', label: `${days}d left`, weight: 500 }
+  return              { color: '#6B7280',  bg: '#F3F4F6', label: `${days}d left`, weight: 400 }
+}
+
+function AtRiskRow({ order, navigate }) {
+  const shipDays     = daysFromNow(order.ship_by_date)
+  const deliverDays  = daysFromNow(order.deliver_by_date)
+
+  // Determine which dates are actually at risk for this order's status
+  const shipAtRisk    = order.ship_by_date   && !['shipped','delivered'].includes(order.status) && shipDays <= 7
+  const deliverAtRisk = order.deliver_by_date && order.status !== 'delivered'                    && deliverDays <= 7
+
+  // Most urgent date drives the row's visual prominence
+  const urgentDays = (() => {
+    const candidates = [
+      shipAtRisk    ? shipDays    : null,
+      deliverAtRisk ? deliverDays : null,
+    ].filter(d => d !== null)
+    if (!candidates.length) return null
+    return Math.min(...candidates)
+  })()
+
+  const grade = urgencyGrade(urgentDays)
+  if (!grade) return null
+
+  return (
+    <div
+      onClick={() => navigate(`/orders/${order.id}`)}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '9px 12px', borderRadius: 8, cursor: 'pointer',
+        background: grade.bg, marginBottom: 6,
+        border: `1px solid ${grade.color}22`,
+        transition: 'opacity 0.15s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+    >
+      {/* Urgency pill */}
+      <div style={{
+        flexShrink: 0, fontSize: 11, fontWeight: grade.weight,
+        color: grade.color, minWidth: 72, paddingTop: 1,
+      }}>
+        {grade.label}
+      </div>
+
+      {/* Order info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {order.customer_name}
+          </span>
+          {order.external_id && (
+            <span className="oms-order-id" style={{ fontSize: 11 }}>#{order.external_id}</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+          <StatusBadge status={order.status} />
+          {shipAtRisk && (
+            <span style={{ fontSize: 11, color: grade.color }}>
+              Ship by {new Date(order.ship_by_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+          {deliverAtRisk && (
+            <span style={{ fontSize: 11, color: deliverDays <= 1 ? grade.color : 'var(--oms-text-muted)' }}>
+              {shipAtRisk ? '· ' : ''}Deliver by {new Date(order.deliver_by_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function formatRelative(dt) {
   if (!dt) return '—'
   const diff = Date.now() - new Date(dt).getTime()
@@ -40,7 +129,7 @@ export default function DashboardPage() {
   const [showNewOrder, setShowNewOrder] = useState(false)
 
   const counts = data?.counts || {}
-  const activity = data?.recent_activity || []
+  const atRiskOrders = data?.at_risk_orders || []
   const recentOrders = ordersData?.orders || []
   const nextPoll = formatNextPoll(walmartStatus?.last_polled_at, walmartStatus?.poll_interval_seconds)
 
@@ -161,36 +250,30 @@ export default function DashboardPage() {
           {/* Right column */}
           <div className="oms-right-col">
 
-            {/* Activity feed */}
+            {/* At-risk orders */}
             <Panel>
               <PanelHeader>
-                <PanelTitle>Recent Activity</PanelTitle>
+                <PanelTitle>At-Risk Orders</PanelTitle>
+                {atRiskOrders.length > 0 && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, color: '#991B1B',
+                    background: '#FEE2E2', borderRadius: 10, padding: '2px 8px',
+                  }}>
+                    {atRiskOrders.length}
+                  </span>
+                )}
               </PanelHeader>
-              {activity.length === 0 ? (
-                <EmptyState title="No activity" sub="Status changes will appear here." />
-              ) : (
-                activity.slice(0, 8).map(item => (
-                  <div key={item.id} className="oms-activity-item">
-                    <StatusDot status={item.to_status} style={{ marginTop: 3, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link
-                        to={`/orders/${item.order_id}`}
-                        className="oms-activity-text"
-                        style={{ textDecoration: 'none', display: 'block' }}
-                      >
-                        {item.customer_name || item.order_id?.slice(0, 8)}
-                      </Link>
-                      <div className="oms-activity-sub">
-                        <StatusBadge status={item.to_status} />
-                        {' '}by {item.changed_by_name || 'System'}
-                      </div>
-                    </div>
-                    <span className="oms-text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap', marginTop: 2 }}>
-                      {formatRelative(item.changed_at)}
-                    </span>
-                  </div>
-                ))
-              )}
+              <div style={{ padding: '4px 0' }}>
+                {isLoading ? (
+                  <TableSkeleton rows={4} cols={1} />
+                ) : atRiskOrders.length === 0 ? (
+                  <EmptyState title="All clear" sub="No orders with approaching deadlines." />
+                ) : (
+                  atRiskOrders.map(order => (
+                    <AtRiskRow key={order.id} order={order} navigate={navigate} />
+                  ))
+                )}
+              </div>
             </Panel>
 
             {/* Walmart sync */}
