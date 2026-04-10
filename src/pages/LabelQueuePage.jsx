@@ -418,6 +418,83 @@ function needsWalmartShip(platform, walmartStatus, trackingPushed, trackingNumbe
   return !['shipped', 'delivered', 'cancelled'].includes(ws)
 }
 
+// ── BulkWalmartShipModal ──────────────────────────────────────────────────────
+// Shows after bulk confirm when multiple Walmart orders need tracking sent.
+function BulkWalmartShipModal({ items, onClose }) {
+  const toast = useToast()
+  const mutation = useSendShipmentToWalmart()
+  // items: [{ orderId, trackingNumber }]
+  const [carriers, setCarriers] = useState(() =>
+    Object.fromEntries(items.map(i => [i.orderId, detectCarrier(i.trackingNumber)]))
+  )
+  const [isSending, setIsSending] = useState(false)
+
+  const handleSendAll = async () => {
+    setIsSending(true)
+    let failed = 0
+    for (const item of items) {
+      try {
+        await mutation.mutateAsync({
+          order_id: item.orderId,
+          tracking_number: item.trackingNumber,
+          carrier: carriers[item.orderId],
+        })
+      } catch {
+        failed++
+      }
+    }
+    setIsSending(false)
+    if (failed > 0) toast.error(`${items.length - failed} sent, ${failed} failed`)
+    else toast.success(`Tracking sent to Walmart for ${items.length} order${items.length !== 1 ? 's' : ''}`)
+    onClose()
+  }
+
+  return (
+    <div className="oms-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="oms-modal" style={{ maxWidth: 480 }}>
+        <div className="oms-modal-title">Send Tracking to Walmart ({items.length})</div>
+        <p style={{ fontSize: 13, color: 'var(--oms-text-secondary)', margin: '8px 0 16px' }}>
+          The following orders haven't had tracking sent to Walmart yet.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto', marginBottom: 16 }}>
+          {items.map(item => (
+            <div key={item.orderId} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto',
+              gap: 8, alignItems: 'center',
+              padding: '8px 10px', background: 'var(--oms-page-bg)', borderRadius: 6,
+            }}>
+              <div>
+                <div className="oms-order-id" style={{ fontSize: 12 }}>{item.trackingNumber}</div>
+                {item.customerName && (
+                  <div className="oms-text-muted" style={{ fontSize: 11, marginTop: 2 }}>{item.customerName}</div>
+                )}
+              </div>
+              <select
+                className="oms-select"
+                style={{ width: 100, fontSize: 12, padding: '4px 8px' }}
+                value={carriers[item.orderId]}
+                onChange={e => setCarriers(prev => ({ ...prev, [item.orderId]: e.target.value }))}
+              >
+                <option value="UPS">UPS</option>
+                <option value="USPS">USPS</option>
+                <option value="FedEx">FedEx</option>
+                <option value="DHL">DHL</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          ))}
+        </div>
+        <ModalActions>
+          <BtnSecondary onClick={onClose} disabled={isSending}>Skip</BtnSecondary>
+          <BtnPrimary loading={isSending} onClick={handleSendAll}>
+            {isSending ? 'Sending…' : `Send All to Walmart`}
+          </BtnPrimary>
+        </ModalActions>
+      </div>
+    </div>
+  )
+}
+
 // ── WalmartShipModal ──────────────────────────────────────────────────────────
 function WalmartShipModal({ orderId, trackingNumber, onClose }) {
   const toast = useToast()
@@ -523,6 +600,7 @@ export default function LabelQueuePage() {
   const [deleteModal, setDeleteModal] = useState(null)
   const [bulkDeleteModal, setBulkDeleteModal] = useState(false)
   const [walmartShipPrompt, setWalmartShipPrompt] = useState(null)
+  const [bulkWalmartPrompt, setBulkWalmartPrompt] = useState(null) // array of items
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [isBulkConfirming, setIsBulkConfirming] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
@@ -624,9 +702,22 @@ export default function LabelQueuePage() {
     const skipped = selected.length - confirmable.length
 
     let failed = 0
+    const walmartItems = []
     for (const label of confirmable) {
       try {
         await confirmMutation.mutateAsync({ labelId: label.id, orderId: label.order_id })
+        if (needsWalmartShip(
+          label.matched_platform,
+          label.matched_walmart_status,
+          label.matched_tracking_pushed_to_walmart,
+          label.tracking_number
+        )) {
+          walmartItems.push({
+            orderId: label.order_id,
+            trackingNumber: label.tracking_number,
+            customerName: label.matched_customer_name,
+          })
+        }
       } catch {
         failed++
       }
@@ -639,6 +730,12 @@ export default function LabelQueuePage() {
     else if (failed > 0) toast.error(`${confirmed} confirmed, ${failed} failed`)
     else if (skipped > 0) toast.success(`${confirmed} confirmed · ${skipped} skipped (no match — assign manually)`)
     else toast.success(`${confirmed} label${confirmed !== 1 ? 's' : ''} confirmed`)
+
+    if (walmartItems.length === 1) {
+      setWalmartShipPrompt({ orderId: walmartItems[0].orderId, trackingNumber: walmartItems[0].trackingNumber })
+    } else if (walmartItems.length > 1) {
+      setBulkWalmartPrompt(walmartItems)
+    }
   }
 
   const TABS = [
@@ -953,6 +1050,12 @@ export default function LabelQueuePage() {
           orderId={walmartShipPrompt.orderId}
           trackingNumber={walmartShipPrompt.trackingNumber}
           onClose={() => setWalmartShipPrompt(null)}
+        />
+      )}
+      {bulkWalmartPrompt && (
+        <BulkWalmartShipModal
+          items={bulkWalmartPrompt}
+          onClose={() => setBulkWalmartPrompt(null)}
         />
       )}
     </div>
