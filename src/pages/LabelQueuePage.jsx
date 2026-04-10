@@ -50,6 +50,27 @@ function labelDisplay(filename) {
   return m ? `Page ${m[1]}` : 'Label'
 }
 
+// ── SelectAllCheckbox ─────────────────────────────────────────────────────────
+function SelectAllCheckbox({ labels, selectedIds, onToggleAll }) {
+  const ref = useRef(null)
+  const allSelected = labels.length > 0 && selectedIds.size === labels.length
+  const someSelected = selectedIds.size > 0 && selectedIds.size < labels.length
+
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = someSelected
+  }, [someSelected])
+
+  return (
+    <input
+      ref={ref}
+      type="checkbox"
+      checked={allSelected}
+      onChange={() => onToggleAll(labels)}
+      style={{ cursor: 'pointer' }}
+    />
+  )
+}
+
 // ── PreviewButton ─────────────────────────────────────────────────────────────
 function PreviewButton({ labelId }) {
   const toast = useToast()
@@ -71,15 +92,13 @@ function PreviewButton({ labelId }) {
 }
 
 // ── OrderHoverCard ────────────────────────────────────────────────────────────
-// Uses a fixed-position portal so the card is never clipped by overflow:auto
-// containers (e.g. the horizontal-scroll table wrapper).
 function OrderHoverCard({ label, children }) {
   const [visible, setVisible] = useState(false)
   const [coords, setCoords] = useState({ top: 0, left: 0 })
   const triggerRef = useRef(null)
   const timerRef = useRef(null)
 
-  const CARD_HEIGHT = 190 // approximate max height for flip logic
+  const CARD_HEIGHT = 190
   const CARD_WIDTH  = 232
 
   const show = () => {
@@ -356,6 +375,30 @@ function DeleteConfirmModal({ label, onConfirm, onClose, isPending }) {
   )
 }
 
+// ── BulkDeleteConfirmModal ────────────────────────────────────────────────────
+function BulkDeleteConfirmModal({ count, onConfirm, onClose, isPending }) {
+  return (
+    <div className="oms-modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="oms-modal" style={{ maxWidth: 380 }}>
+        <div className="oms-modal-title">Delete {count} Labels?</div>
+        <p style={{ fontSize: 13, color: 'var(--oms-text-secondary)', margin: '12px 0 0' }}>
+          This will permanently delete {count} label{count !== 1 ? 's' : ''} and remove the files from storage. This cannot be undone.
+        </p>
+        <ModalActions>
+          <BtnSecondary onClick={onClose} disabled={isPending}>Cancel</BtnSecondary>
+          <button
+            className="oms-btn oms-btn-danger"
+            onClick={onConfirm}
+            disabled={isPending}
+          >
+            {isPending ? 'Deleting…' : `Delete ${count}`}
+          </button>
+        </ModalActions>
+      </div>
+    </div>
+  )
+}
+
 // ── Walmart helpers ───────────────────────────────────────────────────────────
 
 function detectCarrier(tn) {
@@ -431,13 +474,58 @@ function WalmartShipModal({ orderId, trackingNumber, onClose }) {
   )
 }
 
+// ── BulkActionBar ─────────────────────────────────────────────────────────────
+function BulkActionBar({ count, showConfirm, onConfirm, onDelete, onClear, isConfirming, isDeleting }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      padding: '8px 12px', marginBottom: 8,
+      background: 'var(--oms-navy-pale)', borderRadius: 8,
+      border: '1px solid rgba(55,138,221,0.2)',
+    }}>
+      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--oms-navy-mid)', marginRight: 4 }}>
+        {count} selected
+      </span>
+      {showConfirm && (
+        <button
+          className="oms-btn oms-btn-sm"
+          style={{ color: 'var(--oms-label-text)', background: 'var(--oms-label-bg)', border: 'none' }}
+          onClick={onConfirm}
+          disabled={isConfirming || isDeleting}
+        >
+          {isConfirming ? 'Confirming…' : `Confirm ${count}`}
+        </button>
+      )}
+      <button
+        className="oms-btn oms-btn-sm oms-btn-danger"
+        onClick={onDelete}
+        disabled={isConfirming || isDeleting}
+      >
+        <TrashIcon /> Delete {count}
+      </button>
+      <button
+        className="oms-btn oms-btn-sm"
+        onClick={onClear}
+        disabled={isConfirming || isDeleting}
+        style={{ color: 'var(--oms-text-muted)', background: 'transparent', border: '1px solid var(--oms-border)' }}
+      >
+        Clear
+      </button>
+    </div>
+  )
+}
+
 // ── LabelQueuePage ────────────────────────────────────────────────────────────
 export default function LabelQueuePage() {
   const toast = useToast()
   const [tab, setTab] = useState('queue')
   const [assignModal, setAssignModal] = useState(null)
   const [deleteModal, setDeleteModal] = useState(null)
+  const [bulkDeleteModal, setBulkDeleteModal] = useState(false)
   const [walmartShipPrompt, setWalmartShipPrompt] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [isBulkConfirming, setIsBulkConfirming] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const fileRef = useRef()
   const { data: queueData, isLoading: queueLoading } = useLabelQueue()
   const { data: unmatchedData } = useLabelUnmatched()
@@ -448,6 +536,23 @@ export default function LabelQueuePage() {
 
   const queue = queueData?.labels || []
   const unmatched = unmatchedData?.labels || []
+
+  // Clear selection when switching tabs
+  useEffect(() => { setSelectedIds(new Set()) }, [tab])
+
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const toggleSelectAll = (labels) => {
+    if (selectedIds.size === labels.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(labels.map(l => l.id)))
+    }
+  }
 
   const handleUpload = async (e) => {
     const files = Array.from(e.target.files || [])
@@ -493,10 +598,55 @@ export default function LabelQueuePage() {
     }
   }
 
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true)
+    let failed = 0
+    for (const id of selectedIds) {
+      try {
+        await deleteMutation.mutateAsync(id)
+      } catch {
+        failed++
+      }
+    }
+    const deleted = selectedIds.size - failed
+    setIsBulkDeleting(false)
+    setBulkDeleteModal(false)
+    setSelectedIds(new Set())
+    if (failed > 0) toast.error(`${deleted} deleted, ${failed} failed`)
+    else toast.success(`${deleted} label${deleted !== 1 ? 's' : ''} deleted`)
+  }
+
+  const handleBulkConfirm = async () => {
+    setIsBulkConfirming(true)
+    const currentLabels = tab === 'queue' ? queue : unmatched
+    const selected = currentLabels.filter(l => selectedIds.has(l.id))
+    const confirmable = selected.filter(l => l.order_id)
+    const skipped = selected.length - confirmable.length
+
+    let failed = 0
+    for (const label of confirmable) {
+      try {
+        await confirmMutation.mutateAsync({ labelId: label.id, orderId: label.order_id })
+      } catch {
+        failed++
+      }
+    }
+    const confirmed = confirmable.length - failed
+    setIsBulkConfirming(false)
+    setSelectedIds(new Set())
+
+    if (failed > 0 && skipped > 0) toast.error(`${confirmed} confirmed, ${failed} failed, ${skipped} skipped (no match)`)
+    else if (failed > 0) toast.error(`${confirmed} confirmed, ${failed} failed`)
+    else if (skipped > 0) toast.success(`${confirmed} confirmed · ${skipped} skipped (no match — assign manually)`)
+    else toast.success(`${confirmed} label${confirmed !== 1 ? 's' : ''} confirmed`)
+  }
+
   const TABS = [
     { value: 'queue', label: `Review Queue (${queue.length})` },
     { value: 'unmatched', label: `Unmatched (${unmatched.length})` },
   ]
+
+  const currentLabels = tab === 'queue' ? queue : unmatched
 
   return (
     <div className="oms-main">
@@ -535,18 +685,34 @@ export default function LabelQueuePage() {
         {/* Tabs */}
         <Tabs tabs={TABS} active={tab} onChange={setTab} />
 
+        {/* Bulk action bar */}
+        {selectedIds.size > 0 && (
+          <BulkActionBar
+            count={selectedIds.size}
+            showConfirm={tab === 'queue'}
+            onConfirm={handleBulkConfirm}
+            onDelete={() => setBulkDeleteModal(true)}
+            onClear={() => setSelectedIds(new Set())}
+            isConfirming={isBulkConfirming}
+            isDeleting={isBulkDeleting}
+          />
+        )}
+
         {/* Review queue */}
         {tab === 'queue' && (
           queueLoading ? (
-            <Panel><TableSkeleton rows={5} cols={7} /></Panel>
+            <Panel><TableSkeleton rows={5} cols={8} /></Panel>
           ) : queue.length === 0 ? (
             <EmptyState title="No labels pending review" sub="Upload PDF labels to get started." />
           ) : (
             <Panel>
               <div style={{ overflowX: 'auto' }}>
-              <table className="oms-table" style={{ minWidth: 860 }}>
+              <table className="oms-table" style={{ minWidth: 900 }}>
                 <thead>
                   <tr>
+                    <th style={{ width: 36 }}>
+                      <SelectAllCheckbox labels={queue} selectedIds={selectedIds} onToggleAll={toggleSelectAll} />
+                    </th>
                     <th>Label</th>
                     <th>Extracted Name</th>
                     <th>Extracted Address</th>
@@ -559,8 +725,27 @@ export default function LabelQueuePage() {
                 <tbody>
                   {queue.map(label => {
                     const isConflict = label.match_status === 'tracking_conflict'
+                    const isSelected = selectedIds.has(label.id)
                     return (
-                      <tr key={label.id} style={isConflict ? { background: 'rgba(245,158,11,0.05)' } : {}}>
+                      <tr
+                        key={label.id}
+                        style={{
+                          background: isSelected
+                            ? 'rgba(55,138,221,0.06)'
+                            : isConflict
+                            ? 'rgba(245,158,11,0.05)'
+                            : undefined,
+                        }}
+                      >
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(label.id)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </td>
+
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <PreviewButton labelId={label.id} />
@@ -655,9 +840,12 @@ export default function LabelQueuePage() {
           ) : (
             <Panel>
               <div style={{ overflowX: 'auto' }}>
-              <table className="oms-table" style={{ minWidth: 600 }}>
+              <table className="oms-table" style={{ minWidth: 620 }}>
                 <thead>
                   <tr>
+                    <th style={{ width: 36 }}>
+                      <SelectAllCheckbox labels={unmatched} selectedIds={selectedIds} onToggleAll={toggleSelectAll} />
+                    </th>
                     <th>Label</th>
                     <th>Extracted Name</th>
                     <th>Address</th>
@@ -666,47 +854,58 @@ export default function LabelQueuePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {unmatched.map(label => (
-                    <tr key={label.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <PreviewButton labelId={label.id} />
-                          <span className="oms-text-muted" style={{ fontSize: 12 }}>{labelDisplay(label.original_filename)}</span>
-                        </div>
-                      </td>
-                      <td style={{ fontSize: 13 }}>{label.extracted_name || '—'}</td>
-                      <td>
-                        <span className="oms-text-muted" style={{ fontSize: 11, display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {label.extracted_address || '—'}
-                        </span>
-                      </td>
-                      <td>
-                        {label.tracking_number ? (
-                          <span className="oms-order-id">{label.tracking_number}</span>
-                        ) : (
-                          <span className="oms-text-muted">—</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            onClick={() => setAssignModal(label)}
-                            className="oms-btn oms-btn-sm"
-                            style={{ color: 'var(--oms-new-text)', background: 'var(--oms-new-bg)', border: 'none' }}
-                          >
-                            Assign
-                          </button>
-                          <button
-                            onClick={() => setDeleteModal(label)}
-                            className="oms-btn oms-btn-sm oms-btn-danger"
-                            title="Delete label"
-                          >
-                            <TrashIcon />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {unmatched.map(label => {
+                    const isSelected = selectedIds.has(label.id)
+                    return (
+                      <tr key={label.id} style={{ background: isSelected ? 'rgba(55,138,221,0.06)' : undefined }}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(label.id)}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <PreviewButton labelId={label.id} />
+                            <span className="oms-text-muted" style={{ fontSize: 12 }}>{labelDisplay(label.original_filename)}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: 13 }}>{label.extracted_name || '—'}</td>
+                        <td>
+                          <span className="oms-text-muted" style={{ fontSize: 11, display: 'block', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {label.extracted_address || '—'}
+                          </span>
+                        </td>
+                        <td>
+                          {label.tracking_number ? (
+                            <span className="oms-order-id">{label.tracking_number}</span>
+                          ) : (
+                            <span className="oms-text-muted">—</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => setAssignModal(label)}
+                              className="oms-btn oms-btn-sm"
+                              style={{ color: 'var(--oms-new-text)', background: 'var(--oms-new-bg)', border: 'none' }}
+                            >
+                              Assign
+                            </button>
+                            <button
+                              onClick={() => setDeleteModal(label)}
+                              className="oms-btn oms-btn-sm oms-btn-danger"
+                              title="Delete label"
+                            >
+                              <TrashIcon />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
               </div>
@@ -739,6 +938,14 @@ export default function LabelQueuePage() {
           onConfirm={handleDelete}
           onClose={() => setDeleteModal(null)}
           isPending={deleteMutation.isPending}
+        />
+      )}
+      {bulkDeleteModal && (
+        <BulkDeleteConfirmModal
+          count={selectedIds.size}
+          onConfirm={handleBulkDelete}
+          onClose={() => setBulkDeleteModal(false)}
+          isPending={isBulkDeleting}
         />
       )}
       {walmartShipPrompt && (
