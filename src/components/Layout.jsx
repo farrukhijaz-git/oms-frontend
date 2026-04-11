@@ -23,6 +23,12 @@ const LabelsIcon = () => (
     <line x1="7" y1="7" x2="7.01" y2="7"/>
   </svg>
 )
+const ReportsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+  </svg>
+)
 const UsersIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
@@ -41,6 +47,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: DashIcon, exact: true },
   { to: '/orders', label: 'Orders', icon: OrdersIcon },
   { to: '/labels/queue', label: 'Labels', icon: LabelsIcon },
+  { to: '/reports', label: 'Reports', icon: ReportsIcon },
 ]
 const ADMIN_NAV_ITEMS = [
   { to: '/admin/users', label: 'Users', icon: UsersIcon },

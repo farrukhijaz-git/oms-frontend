@@ -13,6 +13,7 @@ import OrderDetailPage from './pages/OrderDetailPage'
 import LabelQueuePage from './pages/LabelQueuePage'
 import AdminUsersPage from './pages/AdminUsersPage'
 import AdminWalmartPage from './pages/AdminWalmartPage'
+import ReportsPage from './pages/ReportsPage'
 
 function RequireAuth({ children }) {
   const { user } = useAuth()
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="orders" element={<OrdersPage />} />
           <Route path="orders/:id" element={<OrderDetailPage />} />
           <Route path="labels/queue" element={<LabelQueuePage />} />
+          <Route path="reports" element={<ReportsPage />} />
           <Route path="admin/users" element={<RequireAdmin><AdminUsersPage /></RequireAdmin>} />
           <Route path="admin/walmart" element={<RequireAdmin><AdminWalmartPage /></RequireAdmin>} />
         </Route>
