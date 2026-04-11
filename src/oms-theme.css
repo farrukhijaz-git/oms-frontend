@@ -279,6 +279,16 @@ body {
 .oms-tab:hover    { color: var(--oms-navy-mid); }
 .oms-tab.active   { color: var(--oms-navy-mid); border-bottom-color: var(--oms-navy-mid); }
 
+/* ── Tab dropdown (mobile-only tab switcher) ── */
+.oms-tab-dropdown          { display: none; position: relative; margin-bottom: 16px; }
+.oms-tab-dropdown-btn      { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--oms-surface); border: 1px solid var(--oms-border-mid); border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--oms-navy-mid); cursor: pointer; }
+.oms-tab-dropdown-btn svg  { flex-shrink: 0; transition: transform 0.15s; }
+.oms-tab-dropdown-btn.open svg { transform: rotate(180deg); }
+.oms-tab-dropdown-list     { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--oms-surface); border: 1px solid var(--oms-border-mid); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 20; overflow: hidden; }
+.oms-tab-dropdown-item     { display: block; width: 100%; padding: 11px 14px; text-align: left; font-size: 13px; font-weight: 500; color: var(--oms-text-secondary); background: none; border: none; cursor: pointer; }
+.oms-tab-dropdown-item:hover  { background: var(--oms-page-bg); color: var(--oms-navy-mid); }
+.oms-tab-dropdown-item.active { color: var(--oms-navy-mid); font-weight: 600; background: var(--oms-navy-pale); }
+
 /* ── Pagination ── */
 .oms-pagination   { display: flex; align-items: center; gap: 4px; padding: 12px 18px; border-top: 1px solid var(--oms-border-soft); justify-content: flex-end; }
 .oms-pg-btn       { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--oms-border-mid); background: var(--oms-surface); font-size: 12px; font-weight: 500; color: var(--oms-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
@@ -355,6 +365,10 @@ body {
 
   /* Utility: hide secondary content on mobile */
   .oms-hide-mobile { display: none !important; }
+
+  /* Tab bar → dropdown on mobile */
+  .oms-tabs         { display: none; }
+  .oms-tab-dropdown { display: block; }
 
   /* Search — full-width so it doesn't crowd the filter pills */
   .oms-search     { width: 100%; }

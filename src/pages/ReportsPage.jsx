@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useShipmentPerformance, useLateShipments, useOverdueOrders } from '../hooks/useReports'
 import {
@@ -446,13 +446,38 @@ const TABS = [
   { id: 'overdue', label: 'Overdue Now' },
 ]
 
+const ChevronDown = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+)
+
 export default function ReportsPage() {
   const [tab, setTab] = useState('performance')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!dropdownOpen) return
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [dropdownOpen])
+
+  const selectTab = (id) => { setTab(id); setDropdownOpen(false) }
+  const currentLabel = TABS.find(t => t.id === tab)?.label
 
   return (
     <div className="oms-main">
       <Topbar title="Reports" />
       <div className="oms-content">
+
+        {/* Desktop: horizontal tab bar */}
         <div className="oms-tabs" style={{ marginBottom: 20 }}>
           {TABS.map(t => (
             <button
@@ -463,6 +488,30 @@ export default function ReportsPage() {
               {t.label}
             </button>
           ))}
+        </div>
+
+        {/* Mobile: dropdown tab switcher */}
+        <div className="oms-tab-dropdown" ref={dropdownRef}>
+          <button
+            className={`oms-tab-dropdown-btn${dropdownOpen ? ' open' : ''}`}
+            onClick={() => setDropdownOpen(o => !o)}
+          >
+            <span>{currentLabel}</span>
+            <ChevronDown />
+          </button>
+          {dropdownOpen && (
+            <div className="oms-tab-dropdown-list">
+              {TABS.map(t => (
+                <button
+                  key={t.id}
+                  className={`oms-tab-dropdown-item${tab === t.id ? ' active' : ''}`}
+                  onClick={() => selectTab(t.id)}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {tab === 'performance' && <PerformanceTab />}
