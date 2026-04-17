@@ -26,6 +26,14 @@ export function usePollNow() {
   })
 }
 
+export function useReconcileNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.post('/walmart/sync/reconcile').then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['walmart'] }),
+  })
+}
+
 export function useBackfill() {
   const qc = useQueryClient()
   return useMutation({

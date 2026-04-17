@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useWalmartStatus, useWalmartLog, usePollNow, useSaveCredentials, useUpdateSettings, useBackfill } from '../hooks/useWalmart'
+import { useWalmartStatus, useWalmartLog, usePollNow, useSaveCredentials, useUpdateSettings, useBackfill, useReconcileNow } from '../hooks/useWalmart'
 import {
   Topbar, Panel, PanelHeader, PanelTitle, PanelBody,
   BtnPrimary, BtnSecondary, FormField, Input, Select, useToast,
@@ -33,6 +33,7 @@ export default function AdminWalmartPage() {
 
   const handleRetry = () => { refetchStatus(); refetchLog() }
   const pollMutation = usePollNow()
+  const reconcileMutation = useReconcileNow()
   const credsMutation = useSaveCredentials()
   const settingsMutation = useUpdateSettings()
   const backfillMutation = useBackfill()
@@ -75,6 +76,16 @@ export default function AdminWalmartPage() {
     }
   }
 
+  const handleReconcileNow = async () => {
+    const jobId = addJob('reconcile', '90-day reconciliation')
+    try {
+      await reconcileMutation.mutateAsync()
+      completeJob(jobId, {})
+    } catch (err) {
+      failJob(jobId, err.response?.data?.error?.message || 'Reconciliation failed')
+    }
+  }
+
   const handleBackfill = async (e) => {
     e.preventDefault()
     try {
@@ -89,6 +100,13 @@ export default function AdminWalmartPage() {
     <div className="oms-main">
 
       <Topbar title="Walmart Integration">
+        <BtnSecondary
+          size="sm"
+          onClick={handleReconcileNow}
+          disabled={!status?.configured || reconcileMutation.isPending}
+        >
+          {reconcileMutation.isPending ? 'Reconciling…' : 'Reconcile 90 Days'}
+        </BtnSecondary>
         <BtnPrimary
           size="sm"
           onClick={handlePollNow}
@@ -215,19 +233,26 @@ export default function AdminWalmartPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {log.map(entry => (
-                    <tr key={entry.id}>
-                      <td className="oms-text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
-                        {new Date(entry.synced_at).toLocaleString()}
-                      </td>
-                      <td className="oms-text-secondary" style={{ fontSize: 12 }}>{entry.sync_type}</td>
-                      <td><SyncStatusBadge status={entry.status} /></td>
-                      <td className="oms-text-secondary">{entry.orders_pulled}</td>
-                      <td style={{ fontSize: 11, color: '#DC2626', wordBreak: 'break-word' }}>
-                        {entry.error_message || '—'}
-                      </td>
-                    </tr>
-                  ))}
+                  {log.map(entry => {
+                    const isReconcile = entry.sync_type === 'reconcile'
+                    return (
+                      <tr key={entry.id} style={isReconcile ? { background: 'var(--oms-navy-pale)' } : undefined}>
+                        <td className="oms-text-muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                          {new Date(entry.synced_at).toLocaleString()}
+                        </td>
+                        <td style={{ fontSize: 12 }}>
+                          {isReconcile
+                            ? <span style={{ fontWeight: 600, color: 'var(--oms-navy-mid)' }}>90-day reconcile</span>
+                            : <span className="oms-text-secondary">poll</span>}
+                        </td>
+                        <td><SyncStatusBadge status={entry.status} /></td>
+                        <td className="oms-text-secondary">{entry.orders_pulled}</td>
+                        <td style={{ fontSize: 11, color: entry.status === 'failed' ? '#DC2626' : 'var(--oms-text-secondary)', wordBreak: 'break-word' }}>
+                          {entry.error_message || '—'}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
